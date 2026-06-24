@@ -1,0 +1,103 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(IFXC VERSION 0.1.0 LANGUAGES C)
+
+option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(BUILD_TESTING "Build the test suite" ON)
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+find_program(BASH_EXECUTABLE bash)
+
+add_library(ifxc
+  src/ifxc_api.c
+  src/ifxc_errors.c
+  src/ifxc_eval.c
+  src/ifxc_metadata.c
+)
+
+add_library(IFXC::ifxc ALIAS ifxc)
+
+target_include_directories(ifxc
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+target_compile_features(ifxc PUBLIC c_std_99)
+
+set_target_properties(ifxc PROPERTIES
+  OUTPUT_NAME ifxc
+  VERSION ${PROJECT_VERSION}
+  SOVERSION 0
+  C_VISIBILITY_PRESET hidden
+  VISIBILITY_INLINES_HIDDEN YES
+  POSITION_INDEPENDENT_CODE YES
+)
+
+if(WIN32 AND BUILD_SHARED_LIBS)
+  target_compile_definitions(ifxc PRIVATE IFXC_BUILD_DLL)
+endif()
+
+install(TARGETS ifxc
+  EXPORT IFXCTargets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(FILES include/ifxc.h
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(EXPORT IFXCTargets
+  NAMESPACE IFXC::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/IFXC
+)
+
+configure_package_config_file(
+  cmake/IFXCConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/IFXCConfig.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/IFXC
+)
+
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/IFXCConfigVersion.cmake
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/IFXCConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/IFXCConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/IFXC
+)
+
+configure_file(
+  cmake/libifxc.pc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/libifxc.pc
+  @ONLY
+)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libifxc.pc
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)
+
+if(BUILD_TESTING)
+  enable_testing()
+
+  add_executable(test_api
+    tests/test_api.c
+  )
+  target_link_libraries(test_api PRIVATE ifxc)
+
+  add_test(NAME api COMMAND test_api)
+
+  if(BASH_EXECUTABLE AND BUILD_SHARED_LIBS)
+    add_test(
+      NAME public_symbols
+      COMMAND ${BASH_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_public_symbols.sh $<TARGET_FILE:ifxc>
+    )
+  endif()
+endif()

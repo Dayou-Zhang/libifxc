@@ -1,0 +1,10 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: libifxc
+Description: Integral-feature exchange-correlation kernel library
+Version: @PROJECT_VERSION@
+Libs: -L${libdir} -lifxc
+Cflags: -I${includedir}

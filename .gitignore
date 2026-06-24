@@ -1,0 +1,40 @@
+# Local workspace notes.
+AGENTS.md
+PLAN.md
+
+# CMake and build output.
+/build/
+/cmake-build-*/
+/CMakeFiles/
+/CMakeCache.txt
+/CTestTestfile.cmake
+/cmake_install.cmake
+/compile_commands.json
+/install_manifest.txt
+/Testing/
+
+# Python virtualenv and cache directories.
+/.venv/
+/__pycache__/
+/.pytest_cache/
+/.mypy_cache/
+/.ruff_cache/
+*.py[cod]
+
+# Compiled objects and libraries.
+*.o
+*.obj
+*.lo
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.lib
+*.out
+
+# Editor and OS cruft.
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

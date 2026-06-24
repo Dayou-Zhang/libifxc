@@ -1,0 +1,5 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/IFXCTargets.cmake")
+
+set(IFXC_VERSION "@PROJECT_VERSION@")

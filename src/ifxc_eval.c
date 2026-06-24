@@ -1,0 +1,235 @@
+#include "ifxc_internal.h"
+
+#include <string.h>
+
+static ifxc_status
+ifxc_get_dims_from_handle(const ifxc_func_type *func, ifxc_dimensions_t *dims)
+{
+  ifxc_status status = ifxc_func_dimensions(func, dims);
+  return status;
+}
+
+static ifxc_status
+ifxc_validate_input(const ifxc_dimensions_t *dims, const ifxc_input *input)
+{
+  if(dims == NULL || input == NULL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+
+  if(input->npoints > 0){
+    if(input->rho == NULL || input->sigma == NULL || input->tau == NULL){
+      return IFXC_E_MISSING_INPUT;
+    }
+  }
+
+  return IFXC_OK;
+}
+
+static int
+ifxc_var_component_count(const ifxc_dimensions_t *dims, ifxc_variable var)
+{
+  switch(var){
+  case IFXC_VAR_RHO:
+    return (int)dims->rho;
+  case IFXC_VAR_SIGMA:
+    return (int)dims->sigma;
+  case IFXC_VAR_LAPL:
+    return (int)dims->lapl;
+  case IFXC_VAR_TAU:
+    return (int)dims->tau;
+  default:
+    return -1;
+  }
+}
+
+static ifxc_status
+ifxc_validate_deriv_entry(const ifxc_dimensions_t *dims, const ifxc_deriv_entry *entry)
+{
+  unsigned int i;
+
+  if(entry == NULL || entry->out == NULL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+  if(entry->order > IFXC_MAX_DERIV_ORDER){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+
+  if(entry->order == 0){
+    return IFXC_OK;
+  }
+
+  for(i = 0; i < entry->order; ++i){
+    if(entry->vars[i] > IFXC_VAR_TAU){
+      return IFXC_E_INVALID_ARGUMENT;
+    }
+    if(i > 0 && entry->vars[i] < entry->vars[i - 1]){
+      return IFXC_E_INVALID_ARGUMENT;
+    }
+    if(entry->vars[i] == IFXC_VAR_LAPL){
+      return IFXC_E_UNSUPPORTED_VARIABLE;
+    }
+    if(ifxc_var_component_count(dims, entry->vars[i]) <= 0){
+      return IFXC_E_UNSUPPORTED_VARIABLE;
+    }
+  }
+
+  return IFXC_OK;
+}
+
+static ifxc_status
+ifxc_entry_size(const ifxc_func_type *func, const ifxc_input *input,
+                const ifxc_deriv_entry *entry, size_t *n_double)
+{
+  ifxc_dimensions_t dims;
+  ifxc_status status;
+  size_t count = 1;
+  unsigned int i;
+
+  if(n_double == NULL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+
+  status = ifxc_get_dims_from_handle(func, &dims);
+  if(status != IFXC_OK){
+    return status;
+  }
+  status = ifxc_validate_input(&dims, input);
+  if(status != IFXC_OK){
+    return status;
+  }
+  status = ifxc_validate_deriv_entry(&dims, entry);
+  if(status != IFXC_OK){
+    return status;
+  }
+
+  if(entry->order == 0){
+    if(entry->target == IFXC_TARGET_LOCAL){
+      *n_double = IFXC_ML25_NFEATURES * input->npoints;
+      return IFXC_OK;
+    }
+    if(entry->target == IFXC_TARGET_INTEGRAL){
+      *n_double = IFXC_ML25_NFEATURES;
+      return IFXC_OK;
+    }
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+
+  for(i = 0; i < entry->order; ++i){
+    int components = ifxc_var_component_count(&dims, entry->vars[i]);
+    if(components <= 0){
+      return IFXC_E_UNSUPPORTED_VARIABLE;
+    }
+    count *= (size_t)components;
+  }
+
+  *n_double = IFXC_ML25_NFEATURES * count * input->npoints;
+  return IFXC_OK;
+}
+
+ifxc_status
+ifxc_output_size(const ifxc_func_type *func, const ifxc_input *input,
+                 const ifxc_deriv_entry *entry, size_t *n_double)
+{
+  return ifxc_entry_size(func, input, entry, n_double);
+}
+
+static ifxc_status
+ifxc_validate_eval_request(const ifxc_func_type *func, const ifxc_input *input,
+                           size_t nentries, const ifxc_deriv_entry *entries,
+                           ifxc_dimensions_t *dims)
+{
+  size_t i;
+  ifxc_status status;
+
+  if(func == NULL || input == NULL || dims == NULL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+
+  status = ifxc_get_dims_from_handle(func, dims);
+  if(status != IFXC_OK){
+    return status;
+  }
+
+  status = ifxc_validate_input(dims, input);
+  if(status != IFXC_OK){
+    return status;
+  }
+
+  if(nentries == 0 || entries == NULL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+
+  for(i = 0; i < nentries; ++i){
+    status = ifxc_validate_deriv_entry(dims, &entries[i]);
+    if(status != IFXC_OK){
+      return status;
+    }
+    if(entries[i].target == IFXC_TARGET_INTEGRAL && input->weights == NULL){
+      return IFXC_E_MISSING_INPUT;
+    }
+    if(entries[i].target != IFXC_TARGET_LOCAL &&
+       entries[i].target != IFXC_TARGET_INTEGRAL){
+      return IFXC_E_INVALID_ARGUMENT;
+    }
+  }
+
+  return IFXC_OK;
+}
+
+static ifxc_status
+ifxc_zero_order0_entry(const ifxc_input *input, const ifxc_deriv_entry *entry,
+                       size_t nfeatures)
+{
+  size_t n_double;
+
+  if(entry->target == IFXC_TARGET_LOCAL){
+    n_double = nfeatures * input->npoints;
+  }else if(entry->target == IFXC_TARGET_INTEGRAL){
+    n_double = nfeatures;
+  }else{
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+
+  if(n_double > 0){
+    memset(entry->out, 0, n_double * sizeof(double));
+  }
+
+  return IFXC_OK;
+}
+
+ifxc_status
+ifxc_eval(const ifxc_func_type *func, const ifxc_input *input,
+          size_t nentries, const ifxc_deriv_entry *entries)
+{
+  ifxc_dimensions_t dims;
+  size_t i;
+  ifxc_status status;
+  const ifxc_handle_impl *impl;
+
+  impl = (const ifxc_handle_impl *)((func != NULL) ? func->impl : NULL);
+  if(impl == NULL){
+    return IFXC_E_NOT_INITIALIZED;
+  }
+
+  status = ifxc_validate_eval_request(func, input, nentries, entries, &dims);
+  if(status != IFXC_OK){
+    return status;
+  }
+
+  if(impl->max_deriv_order == 0){
+    for(i = 0; i < nentries; ++i){
+      if(entries[i].order > 0){
+        return IFXC_E_UNSUPPORTED_DERIVATIVE;
+      }
+    }
+  }
+
+  for(i = 0; i < nentries; ++i){
+    status = ifxc_zero_order0_entry(input, &entries[i], impl->nfeatures);
+    if(status != IFXC_OK){
+      return status;
+    }
+  }
+
+  return IFXC_OK;
+}
