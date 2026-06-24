@@ -176,33 +176,11 @@ ifxc_validate_eval_request(const ifxc_func_type *func, const ifxc_input *input,
   return IFXC_OK;
 }
 
-static ifxc_status
-ifxc_zero_order0_entry(const ifxc_input *input, const ifxc_deriv_entry *entry,
-                       size_t nfeatures)
-{
-  size_t n_double;
-
-  if(entry->target == IFXC_TARGET_LOCAL){
-    n_double = nfeatures * input->npoints;
-  }else if(entry->target == IFXC_TARGET_INTEGRAL){
-    n_double = nfeatures;
-  }else{
-    return IFXC_E_INVALID_ARGUMENT;
-  }
-
-  if(n_double > 0){
-    memset(entry->out, 0, n_double * sizeof(double));
-  }
-
-  return IFXC_OK;
-}
-
 ifxc_status
 ifxc_eval(const ifxc_func_type *func, const ifxc_input *input,
           size_t nentries, const ifxc_deriv_entry *entries)
 {
   ifxc_dimensions_t dims;
-  size_t i;
   ifxc_status status;
   const ifxc_handle_impl *impl;
 
@@ -216,20 +194,7 @@ ifxc_eval(const ifxc_func_type *func, const ifxc_input *input,
     return status;
   }
 
-  if(impl->max_deriv_order == 0){
-    for(i = 0; i < nentries; ++i){
-      if(entries[i].order > 0){
-        return IFXC_E_UNSUPPORTED_DERIVATIVE;
-      }
-    }
-  }
-
-  for(i = 0; i < nentries; ++i){
-    status = ifxc_zero_order0_entry(input, &entries[i], impl->nfeatures);
-    if(status != IFXC_OK){
-      return status;
-    }
-  }
-
-  return IFXC_OK;
+  (void)dims;
+  (void)impl;
+  return ifxc_ml25_eval(func, input, nentries, entries);
 }

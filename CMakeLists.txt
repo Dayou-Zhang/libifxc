@@ -14,7 +14,9 @@ add_library(ifxc
   src/ifxc_api.c
   src/ifxc_errors.c
   src/ifxc_eval.c
+  src/ifxc_ml25_backend.c
   src/ifxc_metadata.c
+  src/libxc_ref/src/mgga_xc_ml25.c
 )
 
 add_library(IFXC::ifxc ALIAS ifxc)
@@ -23,6 +25,8 @@ target_include_directories(ifxc
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/libxc_ref/src
 )
 
 target_compile_features(ifxc PUBLIC c_std_99)
@@ -38,6 +42,10 @@ set_target_properties(ifxc PROPERTIES
 
 if(WIN32 AND BUILD_SHARED_LIBS)
   target_compile_definitions(ifxc PRIVATE IFXC_BUILD_DLL)
+endif()
+
+if(UNIX AND NOT APPLE)
+  target_link_libraries(ifxc PRIVATE m)
 endif()
 
 install(TARGETS ifxc
