@@ -178,6 +178,20 @@ check_unpolarized_eval(void)
     .vars = { IFXC_VAR_RHO, IFXC_VAR_SIGMA },
     .out = rho_sigma_deriv_out
   };
+  double rho_rho_tau_deriv_out[IFXC_ML25_NFEATURES * 2];
+  double rho_rho_tau_tau_deriv_out[IFXC_ML25_NFEATURES * 2];
+  ifxc_deriv_entry rho_rho_tau_deriv_entry = {
+    .target = IFXC_TARGET_LOCAL,
+    .order = 3,
+    .vars = { IFXC_VAR_RHO, IFXC_VAR_RHO, IFXC_VAR_TAU },
+    .out = rho_rho_tau_deriv_out
+  };
+  ifxc_deriv_entry rho_rho_tau_tau_deriv_entry = {
+    .target = IFXC_TARGET_LOCAL,
+    .order = 4,
+    .vars = { IFXC_VAR_RHO, IFXC_VAR_RHO, IFXC_VAR_TAU, IFXC_VAR_TAU },
+    .out = rho_rho_tau_tau_deriv_out
+  };
   size_t n_double = 0;
   ifxc_status status;
 
@@ -195,8 +209,21 @@ check_unpolarized_eval(void)
   status = ifxc_output_size(&func, &input, &rho_sigma_deriv_entry, &n_double);
   check_status(status);
   assert(n_double == (size_t)IFXC_ML25_NFEATURES * 2);
+  status = ifxc_output_size(&func, &input, &rho_rho_tau_deriv_entry, &n_double);
+  check_status(status);
+  assert(n_double == (size_t)IFXC_ML25_NFEATURES * 2);
+  status = ifxc_output_size(&func, &input, &rho_rho_tau_tau_deriv_entry, &n_double);
+  check_status(status);
+  assert(n_double == (size_t)IFXC_ML25_NFEATURES * 2);
 
-  status = ifxc_eval(&func, &input, 4, (const ifxc_deriv_entry[]){local_entry, integral_entry, rho_deriv_entry, rho_sigma_deriv_entry});
+  status = ifxc_eval(&func, &input, 6, (const ifxc_deriv_entry[]){
+    local_entry,
+    integral_entry,
+    rho_deriv_entry,
+    rho_sigma_deriv_entry,
+    rho_rho_tau_deriv_entry,
+    rho_rho_tau_tau_deriv_entry
+  });
   check_status(status);
 
   check_close(local_out[0], -1.1433666468899044);
@@ -214,6 +241,9 @@ check_unpolarized_eval(void)
 
   check_close(rho_sigma_deriv_out[0], 0.26324786692084);
   check_close(rho_sigma_deriv_out[2], -0.11206861044294927);
+
+  assert(isfinite(rho_rho_tau_deriv_out[0]));
+  assert(isfinite(rho_rho_tau_tau_deriv_out[0]));
 
   check_integral_matches_local(IFXC_ML25_NFEATURES, 2, local_out, integral_out, weights);
 
@@ -247,6 +277,19 @@ check_unpolarized_eval(void)
     assert(status == IFXC_E_UNSUPPORTED_VARIABLE);
     status = ifxc_eval(&func, &input, 1, &lapl_entry);
     assert(status == IFXC_E_UNSUPPORTED_VARIABLE);
+  }
+
+  {
+    ifxc_deriv_entry unsupported_entry = {
+      .target = IFXC_TARGET_LOCAL,
+      .order = 5,
+      .vars = { IFXC_VAR_RHO, IFXC_VAR_RHO, IFXC_VAR_RHO, IFXC_VAR_RHO },
+      .out = rho_deriv_out
+    };
+    status = ifxc_output_size(&func, &input, &unsupported_entry, &n_double);
+    assert(status == IFXC_E_UNSUPPORTED_DERIVATIVE);
+    status = ifxc_eval(&func, &input, 1, &unsupported_entry);
+    assert(status == IFXC_E_UNSUPPORTED_DERIVATIVE);
   }
 
   ifxc_end(&func);
@@ -294,6 +337,20 @@ check_polarized_eval(void)
     .vars = { IFXC_VAR_RHO, IFXC_VAR_SIGMA },
     .out = rho_sigma_deriv_out
   };
+  double rho_rho_tau_deriv_out[IFXC_ML25_NFEATURES * 32];
+  double rho_rho_tau_tau_deriv_out[IFXC_ML25_NFEATURES * 32];
+  ifxc_deriv_entry rho_rho_tau_deriv_entry = {
+    .target = IFXC_TARGET_LOCAL,
+    .order = 3,
+    .vars = { IFXC_VAR_RHO, IFXC_VAR_RHO, IFXC_VAR_TAU },
+    .out = rho_rho_tau_deriv_out
+  };
+  ifxc_deriv_entry rho_rho_tau_tau_deriv_entry = {
+    .target = IFXC_TARGET_LOCAL,
+    .order = 4,
+    .vars = { IFXC_VAR_RHO, IFXC_VAR_RHO, IFXC_VAR_TAU, IFXC_VAR_TAU },
+    .out = rho_rho_tau_tau_deriv_out
+  };
   size_t n_double = 0;
   ifxc_status status;
 
@@ -311,8 +368,21 @@ check_polarized_eval(void)
   status = ifxc_output_size(&func, &input, &rho_sigma_deriv_entry, &n_double);
   check_status(status);
   assert(n_double == (size_t)IFXC_ML25_NFEATURES * 12);
+  status = ifxc_output_size(&func, &input, &rho_rho_tau_deriv_entry, &n_double);
+  check_status(status);
+  assert(n_double == (size_t)IFXC_ML25_NFEATURES * 4 * 2 * 2);
+  status = ifxc_output_size(&func, &input, &rho_rho_tau_tau_deriv_entry, &n_double);
+  check_status(status);
+  assert(n_double == (size_t)IFXC_ML25_NFEATURES * 4 * 2 * 2 * 2);
 
-  status = ifxc_eval(&func, &input, 4, (const ifxc_deriv_entry[]){local_entry, integral_entry, rho_deriv_entry, rho_sigma_deriv_entry});
+  status = ifxc_eval(&func, &input, 6, (const ifxc_deriv_entry[]){
+    local_entry,
+    integral_entry,
+    rho_deriv_entry,
+    rho_sigma_deriv_entry,
+    rho_rho_tau_deriv_entry,
+    rho_rho_tau_tau_deriv_entry
+  });
   check_status(status);
 
   check_close(local_out[0], -1.73746382183406);
@@ -330,6 +400,9 @@ check_polarized_eval(void)
 
   check_close(rho_sigma_deriv_out[0], 0.01900933973818406);
   check_close(rho_sigma_deriv_out[4], -3.469446951953614e-18);
+
+  assert(isfinite(rho_rho_tau_deriv_out[0]));
+  assert(isfinite(rho_rho_tau_tau_deriv_out[0]));
 
   check_integral_matches_local(IFXC_ML25_NFEATURES, 2, local_out, integral_out, weights);
 

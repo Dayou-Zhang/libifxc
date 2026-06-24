@@ -13,7 +13,11 @@ find_program(BASH_EXECUTABLE bash)
 
 set(IFXC_GENERATED_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/ifxc_mgga_xc_ml25_features.c)
 set(IFXC_GENERATED_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/ifxc_mgga_xc_ml25_features.h)
-set(IFXC_MAPLE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/maple/ifxc_mgga_xc_ml25_features.mpl)
+set(IFXC_MAPLE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/maple/mgga_xc_ml25.mpl)
+set(IFXC_FUNCTIONAL_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/libxc_ref/src/mgga_xc_ml25.c)
+file(GLOB_RECURSE IFXC_MAPLE_DEPENDENCIES CONFIGURE_DEPENDS
+  ${CMAKE_CURRENT_SOURCE_DIR}/maple/*.mpl
+)
 set(IFXC_GENERATE_ARGS
   ${Python3_EXECUTABLE}
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c_ifxc.py
@@ -21,6 +25,7 @@ set(IFXC_GENERATE_ARGS
   --feature-def ${CMAKE_CURRENT_SOURCE_DIR}/src/features/ifxc_ml25_features.def
   --feature-set ml25
   --max-deriv-order 4
+  --functional-source ${IFXC_FUNCTIONAL_SOURCE}
   --backend-source ${CMAKE_CURRENT_SOURCE_DIR}/src/ifxc_ml25_backend.c
   --output-c ${IFXC_GENERATED_SOURCE}
   --output-h ${IFXC_GENERATED_HEADER}
@@ -32,6 +37,8 @@ add_custom_command(
   DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c_ifxc.py
     ${IFXC_MAPLE_SOURCE}
+    ${IFXC_FUNCTIONAL_SOURCE}
+    ${IFXC_MAPLE_DEPENDENCIES}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/features/ifxc_ml25_features.def
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
@@ -49,7 +56,6 @@ add_library(ifxc
   src/ifxc_eval.c
   src/ifxc_metadata.c
   ${IFXC_GENERATED_SOURCE}
-  src/libxc_ref/src/mgga_xc_ml25.c
 )
 
 add_library(IFXC::ifxc ALIAS ifxc)

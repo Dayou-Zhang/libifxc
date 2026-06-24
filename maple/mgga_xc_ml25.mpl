@@ -1,9 +1,13 @@
-# ifxc_mgga_xc_ml25_features.mpl
-# Source of truth for libifxc ML25 integral-feature kernels.
-# Feature order must match src/features/ifxc_ml25_features.def.
+(*
+ mgga_xc_ml25.mpl
+ Source of truth for libifxc ML25 integral-feature kernels.
+ Feature order must match src/features/ifxc_ml25_features.def.
+*)
 
 ifxc_feature_set_key := "ml25":
 ifxc_feature_count := 66:
+
+$include "mgga_exc/mgga_xc_ml25_common.mpl"
 
 # 0: LAK exchange
 $include "mgga_exc/mgga_x_lak.mpl"
