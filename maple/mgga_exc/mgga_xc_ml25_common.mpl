@@ -4,6 +4,8 @@
  Maple source has one shared definition path.
 *)
 
+$include "../util.mpl"
+
 (* parameters from page 3 *)
 lak_h0x := 1.174:
 lak_mu_ax := -(97 + 3*lak_h0x + sqrt((3*lak_h0x)^2 + 74166*lak_h0x - 64175))/1200:
