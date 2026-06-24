@@ -236,6 +236,19 @@ check_unpolarized_eval(void)
     assert(status == IFXC_E_INVALID_ARGUMENT);
   }
 
+  {
+    ifxc_deriv_entry lapl_entry = {
+      .target = IFXC_TARGET_LOCAL,
+      .order = 1,
+      .vars = { IFXC_VAR_LAPL },
+      .out = rho_deriv_out
+    };
+    status = ifxc_output_size(&func, &input, &lapl_entry, &n_double);
+    assert(status == IFXC_E_UNSUPPORTED_VARIABLE);
+    status = ifxc_eval(&func, &input, 1, &lapl_entry);
+    assert(status == IFXC_E_UNSUPPORTED_VARIABLE);
+  }
+
   ifxc_end(&func);
 }
 

@@ -43,15 +43,18 @@ ifxc_var_component_count(const ifxc_dimensions_t *dims, ifxc_variable var)
 }
 
 static ifxc_status
-ifxc_validate_deriv_entry(const ifxc_dimensions_t *dims, const ifxc_deriv_entry *entry)
+ifxc_validate_deriv_entry(
+    const ifxc_dimensions_t *dims,
+    unsigned int max_order,
+    const ifxc_deriv_entry *entry)
 {
   unsigned int i;
 
   if(entry == NULL || entry->out == NULL){
     return IFXC_E_INVALID_ARGUMENT;
   }
-  if(entry->order > IFXC_MAX_DERIV_ORDER){
-    return IFXC_E_INVALID_ARGUMENT;
+  if(entry->order > max_order){
+    return IFXC_E_UNSUPPORTED_DERIVATIVE;
   }
 
   if(entry->order == 0){
@@ -78,7 +81,9 @@ ifxc_validate_deriv_entry(const ifxc_dimensions_t *dims, const ifxc_deriv_entry 
 
 static ifxc_status
 ifxc_entry_size(const ifxc_func_type *func, const ifxc_input *input,
-                const ifxc_deriv_entry *entry, size_t *n_double)
+                unsigned int max_order,
+                const ifxc_deriv_entry *entry,
+                size_t *n_double)
 {
   ifxc_dimensions_t dims;
   ifxc_status status;
@@ -97,7 +102,7 @@ ifxc_entry_size(const ifxc_func_type *func, const ifxc_input *input,
   if(status != IFXC_OK){
     return status;
   }
-  status = ifxc_validate_deriv_entry(&dims, entry);
+  status = ifxc_validate_deriv_entry(&dims, max_order, entry);
   if(status != IFXC_OK){
     return status;
   }
@@ -130,11 +135,17 @@ ifxc_status
 ifxc_output_size(const ifxc_func_type *func, const ifxc_input *input,
                  const ifxc_deriv_entry *entry, size_t *n_double)
 {
-  return ifxc_entry_size(func, input, entry, n_double);
+  const ifxc_handle_impl *impl = (const ifxc_handle_impl *)((func != NULL) ? func->impl : NULL);
+  if(impl == NULL){
+    return IFXC_E_NOT_INITIALIZED;
+  }
+
+  return ifxc_entry_size(func, input, impl->max_deriv_order, entry, n_double);
 }
 
 static ifxc_status
 ifxc_validate_eval_request(const ifxc_func_type *func, const ifxc_input *input,
+                           unsigned int max_order,
                            size_t nentries, const ifxc_deriv_entry *entries,
                            ifxc_dimensions_t *dims)
 {
@@ -160,7 +171,7 @@ ifxc_validate_eval_request(const ifxc_func_type *func, const ifxc_input *input,
   }
 
   for(i = 0; i < nentries; ++i){
-    status = ifxc_validate_deriv_entry(dims, &entries[i]);
+    status = ifxc_validate_deriv_entry(dims, max_order, &entries[i]);
     if(status != IFXC_OK){
       return status;
     }
@@ -189,7 +200,7 @@ ifxc_eval(const ifxc_func_type *func, const ifxc_input *input,
     return IFXC_E_NOT_INITIALIZED;
   }
 
-  status = ifxc_validate_eval_request(func, input, nentries, entries, &dims);
+  status = ifxc_validate_eval_request(func, input, impl->max_deriv_order, nentries, entries, &dims);
   if(status != IFXC_OK){
     return status;
   }
