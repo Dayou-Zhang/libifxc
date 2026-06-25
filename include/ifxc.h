@@ -81,8 +81,6 @@ extern "C" {
 #define IFXC_ML25_MN15_B08 64
 #define IFXC_ML25_MN15_B09 65
 
-#define IFXC_MAX_DERIV_ORDER 4
-
 #if defined(_WIN32) || defined(__CYGWIN__)
 #  if defined(IFXC_BUILD_DLL)
 #    define IFXC_API __declspec(dllexport)
@@ -170,6 +168,12 @@ typedef struct ifxc_func_type {
   void *impl;
 } ifxc_func_type;
 
+/* Input arrays are component-major:
+ *   rho[component * npoints + point]
+ *   sigma[component * npoints + point]
+ *   tau[component * npoints + point]
+ * ML25 does not use lapl; pass NULL for lapl. weights is required only for
+ * entries whose target is IFXC_TARGET_INTEGRAL. */
 typedef struct {
   size_t npoints;
   const double *rho;
@@ -182,9 +186,27 @@ typedef struct {
 typedef struct {
   ifxc_target target;
   unsigned int order;
-  ifxc_variable vars[IFXC_MAX_DERIV_ORDER];
+  /* Length is order. For order 0 this may be NULL. For order > 0, variables
+   * must be sorted in nondecreasing enum order. */
+  const ifxc_variable *vars;
   double *out;
 } ifxc_deriv_entry;
+
+/* Output layout:
+ *   LOCAL, order 0:
+ *     out[point * nfeatures + feature] = h_f(r_point)
+ *   LOCAL, order > 0:
+ *     out[(point * nfeatures + feature) * ncomponents + component]
+ *       = d^order h_f(r_point) / dvars...
+ *   INTEGRAL, order 0:
+ *     out[feature] = sum_point weights[point] * h_f(r_point)
+ *   INTEGRAL, order > 0:
+ *     out[(point * nfeatures + feature) * ncomponents + component]
+ *       = weights[point] * d^order h_f(r_point) / dvars...
+ *
+ * Repeated variables use compact symmetric component enumeration; mixed
+ * variable groups use products of those compact groups. Use ifxc_output_size()
+ * to size buffers for a requested entry. */
 
 IFXC_API const char *ifxc_version_string(void);
 IFXC_API int ifxc_version_major(void);

@@ -15,7 +15,7 @@ This is **not** a Libxc compatibility layer. The codebase borrows useful impleme
 - No public LDA/GGA/MGGA family split.
 - The public API is centered on `ifxc_init()`, `ifxc_eval()`, and `ifxc_end()`.
 - Feature metadata is fixed and public, but it is not a registry system.
-- Generated ML25 formulas come from one combined Maple source, not many per-feature hand-maintained C files.
+- ML25 metadata is anchored by one combined Maple manifest, with generated formula C checked in for normal builds.
 
 ## Public API summary
 
@@ -29,6 +29,25 @@ Typical flow:
 4. Destroy the handle with `ifxc_end()`.
 
 For ML25, the public input uses density-variable arrays laid out by component, then point.
+Local outputs are point-major with all 66 features contiguous for each point:
+
+```text
+local[point * IFXC_ML25_NFEATURES + feature]
+```
+
+Derivative outputs add a final component dimension:
+
+```text
+deriv[(point * IFXC_ML25_NFEATURES + feature) * ncomponents + component]
+```
+
+For `IFXC_TARGET_INTEGRAL`, order-0 outputs are one scalar per feature. Integral
+derivatives remain grid-resolved and include the quadrature weight:
+
+```text
+integral_deriv[(point * IFXC_ML25_NFEATURES + feature) * ncomponents + component]
+  = weights[point] * local_derivative(...)
+```
 
 ## Minimal usage example
 
@@ -86,7 +105,7 @@ int main(void)
     return 1;
   }
 
-  printf("feature 0 local at point 0: %g\n", local[IFXC_ML25_LAK_X * input.npoints + 0]);
+  printf("feature 0 local at point 0: %g\n", local[0 * IFXC_ML25_NFEATURES + IFXC_ML25_LAK_X]);
   printf("feature 0 integral: %g\n", integral[IFXC_ML25_LAK_X]);
 
   ifxc_end(&func);
@@ -113,6 +132,8 @@ ctest --test-dir build
 ## Notes
 
 - `IFXC_ML25_NFEATURES` is 66.
-- `ifxc_output_size()` can be used to size result buffers dynamically.
+- `ifxc_output_size()` should be used to size derivative result buffers dynamically.
 - Higher-order derivative requests are validated against the generated maximum derivative order.
+- Derivative entries pass `vars` as a pointer of length `order`; `order == 0` may use `vars = NULL`.
 - Unsupported variables, such as `IFXC_VAR_LAPL` for ML25, fail explicitly.
+- Normal builds use checked-in generated formula C and do not require Maple. The current no-Maple manifest check verifies that ML25 metadata and the Maple manifest remain in sync.

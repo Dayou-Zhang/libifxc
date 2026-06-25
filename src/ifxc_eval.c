@@ -60,6 +60,9 @@ ifxc_validate_deriv_entry(
   if(entry->order == 0){
     return IFXC_OK;
   }
+  if(entry->vars == NULL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
 
   for(i = 0; i < entry->order; ++i){
     if(entry->vars[i] > IFXC_VAR_TAU){
@@ -81,6 +84,7 @@ ifxc_validate_deriv_entry(
 
 static ifxc_status
 ifxc_entry_size(const ifxc_func_type *func, const ifxc_input *input,
+                size_t nfeatures,
                 unsigned int max_order,
                 const ifxc_deriv_entry *entry,
                 size_t *n_double)
@@ -88,7 +92,6 @@ ifxc_entry_size(const ifxc_func_type *func, const ifxc_input *input,
   ifxc_dimensions_t dims;
   ifxc_status status;
   size_t count = 1;
-  unsigned int i;
 
   if(n_double == NULL){
     return IFXC_E_INVALID_ARGUMENT;
@@ -106,28 +109,29 @@ ifxc_entry_size(const ifxc_func_type *func, const ifxc_input *input,
   if(status != IFXC_OK){
     return status;
   }
+  if(entry->target != IFXC_TARGET_LOCAL &&
+     entry->target != IFXC_TARGET_INTEGRAL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
 
   if(entry->order == 0){
     if(entry->target == IFXC_TARGET_LOCAL){
-      *n_double = IFXC_ML25_NFEATURES * input->npoints;
+      *n_double = nfeatures * input->npoints;
       return IFXC_OK;
     }
     if(entry->target == IFXC_TARGET_INTEGRAL){
-      *n_double = IFXC_ML25_NFEATURES;
+      *n_double = nfeatures;
       return IFXC_OK;
     }
     return IFXC_E_INVALID_ARGUMENT;
   }
 
-  for(i = 0; i < entry->order; ++i){
-    int components = ifxc_var_component_count(&dims, entry->vars[i]);
-    if(components <= 0){
-      return IFXC_E_UNSUPPORTED_VARIABLE;
-    }
-    count *= (size_t)components;
+  status = ifxc_derivative_component_count(&dims, entry, &count);
+  if(status != IFXC_OK){
+    return status;
   }
 
-  *n_double = IFXC_ML25_NFEATURES * count * input->npoints;
+  *n_double = nfeatures * count * input->npoints;
   return IFXC_OK;
 }
 
@@ -140,7 +144,8 @@ ifxc_output_size(const ifxc_func_type *func, const ifxc_input *input,
     return IFXC_E_NOT_INITIALIZED;
   }
 
-  return ifxc_entry_size(func, input, impl->max_deriv_order, entry, n_double);
+  return ifxc_entry_size(func, input, impl->nfeatures,
+                         impl->max_deriv_order, entry, n_double);
 }
 
 static ifxc_status

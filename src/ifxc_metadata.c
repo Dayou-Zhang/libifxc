@@ -5,7 +5,7 @@ static const ifxc_feature_set_info_t IFXC_ML25_FEATURE_SET_INFO = {
   .key = "ml25",
   .name = "ML25 integral features",
   .nfeatures = IFXC_ML25_NFEATURES,
-  .max_deriv_order = IFXC_MAX_DERIV_ORDER
+  .max_deriv_order = IFXC_ML25_GENERATED_MAX_ORDER
 };
 
 #define IFXC_ML25_FEATURE(feature_index, feature_name, feature_key, feature_group, feature_kind) \

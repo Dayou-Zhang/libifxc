@@ -11,49 +11,28 @@ include(CMakePackageConfigHelpers)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_program(BASH_EXECUTABLE bash)
 
-set(IFXC_GENERATED_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/ifxc_mgga_xc_ml25_features.c)
-set(IFXC_GENERATED_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/ifxc_mgga_xc_ml25_features.h)
 set(IFXC_MAPLE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/maple/mgga_xc_ml25.mpl)
-file(GLOB_RECURSE IFXC_MAPLE_DEPENDENCIES CONFIGURE_DEPENDS
-  ${CMAKE_CURRENT_SOURCE_DIR}/maple/*.mpl
-)
-set(IFXC_GENERATE_ARGS
+set(IFXC_MANIFEST_CHECK_ARGS
   ${Python3_EXECUTABLE}
-  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c_ifxc.py
+  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_ml25_manifest.py
   --source ${IFXC_MAPLE_SOURCE}
   --feature-def ${CMAKE_CURRENT_SOURCE_DIR}/src/features/ifxc_ml25_features.def
-  --feature-set ml25
-  --max-deriv-order 4
-  --output-c ${IFXC_GENERATED_SOURCE}
-  --output-h ${IFXC_GENERATED_HEADER}
 )
 
-add_custom_command(
-  OUTPUT ${IFXC_GENERATED_SOURCE} ${IFXC_GENERATED_HEADER}
-  COMMAND ${IFXC_GENERATE_ARGS}
-  DEPENDS
-    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c_ifxc.py
-    ${IFXC_MAPLE_SOURCE}
-    ${IFXC_MAPLE_DEPENDENCIES}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/features/ifxc_ml25_features.def
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  VERBATIM
-)
-
-add_custom_target(generate
-  COMMAND ${IFXC_GENERATE_ARGS}
+add_custom_target(check-generated
+  COMMAND ${IFXC_MANIFEST_CHECK_ARGS}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
 )
 
 add_library(ifxc
   src/ifxc_api.c
+  src/ifxc_derivatives.c
   src/ifxc_errors.c
   src/ifxc_eval.c
   src/ifxc_metadata.c
   src/ifxc_ml25_backend.c
   src/ifxc_ml25_kernels.c
-  ${IFXC_GENERATED_SOURCE}
 )
 
 add_library(IFXC::ifxc ALIAS ifxc)
@@ -64,7 +43,6 @@ target_include_directories(ifxc
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/generated
 )
 
 target_compile_features(ifxc PUBLIC c_std_99)
@@ -149,7 +127,7 @@ if(BUILD_TESTING)
 
   if(BASH_EXECUTABLE)
     add_test(
-      NAME generated_freshness
+      NAME ml25_manifest
       COMMAND ${BASH_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_generated.sh ${CMAKE_CURRENT_BINARY_DIR}
     )
   endif()

@@ -76,7 +76,7 @@ ifxc_init(ifxc_func_type *func, int feature_set, ifxc_nspin nspin)
   impl->feature_set = feature_set;
   impl->nspin = nspin;
   impl->nfeatures = IFXC_ML25_NFEATURES;
-  impl->max_deriv_order = IFXC_MAX_DERIV_ORDER;
+  impl->max_deriv_order = IFXC_ML25_GENERATED_MAX_ORDER;
 
   ifxc_status status = ifxc_dimensions(feature_set, nspin, &impl->dims);
   if(status != IFXC_OK){

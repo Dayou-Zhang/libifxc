@@ -120,44 +120,6 @@ ifxc_ml25_set_private_dimensions(int nspin, xc_dimensions *dim)
   dim->v4tau4 = 5;
 }
 
-static size_t
-ifxc_ml25_public_component_count(const ifxc_dimensions_t *dims, ifxc_variable var)
-{
-  switch(var){
-  case IFXC_VAR_RHO:
-    return dims->rho;
-  case IFXC_VAR_SIGMA:
-    return dims->sigma;
-  case IFXC_VAR_LAPL:
-    return dims->lapl;
-  case IFXC_VAR_TAU:
-    return dims->tau;
-  default:
-    return 0;
-  }
-}
-
-static size_t
-ifxc_ml25_entry_component_count(const ifxc_dimensions_t *dims, const ifxc_deriv_entry *entry)
-{
-  size_t count = 1;
-  unsigned int i;
-
-  if(entry->order == 0){
-    return 1;
-  }
-
-  for(i = 0; i < entry->order; ++i){
-    size_t components = ifxc_ml25_public_component_count(dims, entry->vars[i]);
-    if(components == 0){
-      return 0;
-    }
-    count *= components;
-  }
-
-  return count;
-}
-
 static const double *
 ifxc_ml25_select_source_buffer(const xc_mgga_out_params *out, const ifxc_deriv_entry *entry)
 {
@@ -326,29 +288,33 @@ ifxc_ml25_copy_feature_entry(
     const ifxc_input *input,
     const ifxc_dimensions_t *dims,
     size_t feature_index,
+    size_t nfeatures,
     const ifxc_deriv_entry *entry,
     const double *src,
     double scale)
 {
   size_t npoints = input->npoints;
-  size_t ncomp = ifxc_ml25_entry_component_count(dims, entry);
+  size_t ncomp = 0;
   size_t point;
+  ifxc_status status = ifxc_derivative_component_count(dims, entry, &ncomp);
+  if(status != IFXC_OK){
+    return status;
+  }
 
   if(entry->target == IFXC_TARGET_LOCAL){
     if(entry->order == 0){
-      double *dest = entry->out + feature_index * npoints;
       for(point = 0; point < npoints; ++point){
-        dest[point] = scale * src[point];
+        entry->out[point * nfeatures + feature_index] = scale * src[point];
       }
       return IFXC_OK;
     }
 
     {
-      double *dest = entry->out + feature_index * npoints * ncomp;
       size_t comp;
-      for(comp = 0; comp < ncomp; ++comp){
-        for(point = 0; point < npoints; ++point){
-          dest[comp * npoints + point] = scale * src[point * ncomp + comp];
+      for(point = 0; point < npoints; ++point){
+        for(comp = 0; comp < ncomp; ++comp){
+          size_t dest_index = (point * nfeatures + feature_index) * ncomp + comp;
+          entry->out[dest_index] = scale * src[point * ncomp + comp];
         }
       }
     }
@@ -366,11 +332,11 @@ ifxc_ml25_copy_feature_entry(
     }
 
     {
-      double *dest = entry->out + feature_index * npoints * ncomp;
       size_t comp;
-      for(comp = 0; comp < ncomp; ++comp){
-        for(point = 0; point < npoints; ++point){
-          dest[comp * npoints + point] = input->weights[point] * scale * src[point * ncomp + comp];
+      for(point = 0; point < npoints; ++point){
+        for(comp = 0; comp < ncomp; ++comp){
+          size_t dest_index = (point * nfeatures + feature_index) * ncomp + comp;
+          entry->out[dest_index] = input->weights[point] * scale * src[point * ncomp + comp];
         }
       }
     }
@@ -555,7 +521,7 @@ ifxc_ml25_eval(
 
   npoints = input->npoints;
   feature_scale = 2.0;
-  eval_npoints = (npoints > 0) ? 1 : 0;
+  eval_npoints = npoints;
   ifxc_ml25_set_private_dimensions((impl->nspin == IFXC_UNPOLARIZED) ? XC_UNPOLARIZED : XC_POLARIZED,
                                    &private_dims);
 
@@ -569,8 +535,7 @@ ifxc_ml25_eval(
     goto cleanup;
   }
 
-  status = ifxc_ml25_prepare_private_func(&p,
-                                          (impl->nspin == IFXC_UNPOLARIZED) ? IFXC_UNPOLARIZED : XC_POLARIZED);
+  status = ifxc_ml25_prepare_private_func(&p, impl->nspin);
   if(status != IFXC_OK){
     goto cleanup;
   }
@@ -585,8 +550,6 @@ ifxc_ml25_eval(
       status = IFXC_E_INTERNAL;
       goto cleanup;
     }
-    /* ML25 feature evaluation is pointwise; the test harness consumes the
-     * first point and expects later slots to remain zero. */
     selected_work(&p, eval_npoints, rho_tm, sigma_tm, lapl_tm, tau_tm, &out);
 
     for(entry_index = 0; entry_index < nentries; ++entry_index){
@@ -598,7 +561,7 @@ ifxc_ml25_eval(
         goto cleanup;
       }
       status = ifxc_ml25_copy_feature_entry(
-          input, &impl->dims, feature_index, entry, src, feature_scale);
+          input, &impl->dims, feature_index, impl->nfeatures, entry, src, feature_scale);
       if(status != IFXC_OK){
         goto cleanup;
       }
