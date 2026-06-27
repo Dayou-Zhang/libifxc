@@ -8,6 +8,7 @@
 #include "xc.h"
 
 extern xc_mgga_funcs_variants *work_mgga_ml25[];
+xc_mgga_funcs_variants *ifxc_ml25_combined_work_mgga(void);
 
 static const xc_func_info_type IFXC_ML25_PRIVATE_INFO = {
   .number = 888,
@@ -54,6 +55,11 @@ static const xc_func_info_type IFXC_ML25_PRIVATE_INFO = {
 
 static void ifxc_ml25_free_inputs(double *rho_tm, double *sigma_tm, double *lapl_tm, double *tau_tm);
 static void ifxc_ml25_free_private_outputs(xc_mgga_out_params *out);
+static ifxc_status ifxc_ml25_eval_order0_combined(
+    const ifxc_handle_impl *impl,
+    const ifxc_input *input,
+    size_t nentries,
+    const ifxc_deriv_entry *entries);
 
 static void
 ifxc_ml25_set_private_dimensions(int nspin, xc_dimensions *dim)
@@ -441,6 +447,24 @@ cleanup:
   return status;
 }
 
+static ifxc_status
+ifxc_ml25_allocate_combined_order0_outputs(
+    size_t nfeatures,
+    size_t npoints,
+    xc_mgga_out_params *out)
+{
+  if(npoints == 0){
+    return IFXC_OK;
+  }
+
+  out->zk = (double *)calloc(npoints * nfeatures, sizeof(double));
+  if(out->zk == NULL){
+    return IFXC_E_ALLOCATION;
+  }
+
+  return IFXC_OK;
+}
+
 static void
 ifxc_ml25_free_private_outputs(xc_mgga_out_params *out)
 {
@@ -467,6 +491,20 @@ ifxc_ml25_zero_private_outputs(
   IFXC_ML25_PRIVATE_FIELDS(IFXC_ZERO_FIELD)
 
 #undef IFXC_ZERO_FIELD
+}
+
+static int
+ifxc_ml25_entries_are_order0(size_t nentries, const ifxc_deriv_entry *entries)
+{
+  size_t i;
+
+  for(i = 0; i < nentries; ++i){
+    if(entries[i].order != 0){
+      return 0;
+    }
+  }
+
+  return 1;
 }
 
 static ifxc_status
@@ -518,6 +556,9 @@ ifxc_ml25_eval(
   if(impl->feature_set != IFXC_FEATURE_SET_ML25){
     return IFXC_E_UNKNOWN_FEATURE_SET;
   }
+  if(ifxc_ml25_entries_are_order0(nentries, entries) && ifxc_ml25_has_combined_order0()){
+    return ifxc_ml25_eval_order0_combined(impl, input, nentries, entries);
+  }
 
   npoints = input->npoints;
   feature_scale = 2.0;
@@ -565,6 +606,92 @@ ifxc_ml25_eval(
       if(status != IFXC_OK){
         goto cleanup;
       }
+    }
+  }
+
+  status = IFXC_OK;
+
+cleanup:
+  ifxc_ml25_finish_private_func(&p);
+  ifxc_ml25_free_private_outputs(&out);
+  ifxc_ml25_free_inputs(rho_tm, sigma_tm, lapl_tm, tau_tm);
+  return status;
+}
+
+static ifxc_status
+ifxc_ml25_eval_order0_combined(
+    const ifxc_handle_impl *impl,
+    const ifxc_input *input,
+    size_t nentries,
+    const ifxc_deriv_entry *entries)
+{
+  xc_dimensions private_dims;
+  double *rho_tm = NULL;
+  double *sigma_tm = NULL;
+  double *lapl_tm = NULL;
+  double *tau_tm = NULL;
+  xc_mgga_out_params out = {0};
+  xc_func_type p = {0};
+  ifxc_status status;
+  size_t entry_index;
+  size_t npoints;
+  xc_mgga_funcs selected_work;
+  double feature_scale = 2.0;
+
+  npoints = input->npoints;
+  ifxc_ml25_set_private_dimensions((impl->nspin == IFXC_UNPOLARIZED) ? XC_UNPOLARIZED : XC_POLARIZED,
+                                   &private_dims);
+  private_dims.zk = impl->nfeatures;
+
+  status = ifxc_ml25_transpose_inputs(&impl->dims, input, &rho_tm, &sigma_tm, &lapl_tm, &tau_tm);
+  if(status != IFXC_OK){
+    goto cleanup;
+  }
+
+  status = ifxc_ml25_allocate_combined_order0_outputs(impl->nfeatures, npoints, &out);
+  if(status != IFXC_OK){
+    goto cleanup;
+  }
+
+  status = ifxc_ml25_prepare_private_func(&p, impl->nspin);
+  if(status != IFXC_OK){
+    goto cleanup;
+  }
+  p.dim = private_dims;
+
+  selected_work = (impl->nspin == IFXC_UNPOLARIZED)
+    ? ifxc_ml25_combined_work_mgga()->unpol[0]
+    : ifxc_ml25_combined_work_mgga()->pol[0];
+  if(selected_work == NULL){
+    status = IFXC_E_INTERNAL;
+    goto cleanup;
+  }
+
+  selected_work(&p, npoints, rho_tm, sigma_tm, lapl_tm, tau_tm, &out);
+
+  for(entry_index = 0; entry_index < nentries; ++entry_index){
+    const ifxc_deriv_entry *entry = &entries[entry_index];
+    size_t point;
+    size_t feature;
+
+    if(entry->target == IFXC_TARGET_LOCAL){
+      for(point = 0; point < npoints; ++point){
+        for(feature = 0; feature < impl->nfeatures; ++feature){
+          size_t index = point * impl->nfeatures + feature;
+          entry->out[index] = feature_scale * out.zk[index];
+        }
+      }
+    }else if(entry->target == IFXC_TARGET_INTEGRAL){
+      for(feature = 0; feature < impl->nfeatures; ++feature){
+        double sum = 0.0;
+        for(point = 0; point < npoints; ++point){
+          sum += input->weights[point] * feature_scale * out.zk[point * impl->nfeatures + feature];
+        }
+        entry->out[feature] = sum;
+      }
+    }else{
+      status = IFXC_E_INVALID_ARGUMENT;
+      goto cleanup;
     }
   }
 

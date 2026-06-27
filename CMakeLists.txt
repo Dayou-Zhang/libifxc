@@ -18,6 +18,19 @@ set(IFXC_MANIFEST_CHECK_ARGS
   --source ${IFXC_MAPLE_SOURCE}
   --feature-def ${CMAKE_CURRENT_SOURCE_DIR}/src/features/ifxc_ml25_features.def
 )
+set(IFXC_MAPLE2C_ARGS
+  ${Python3_EXECUTABLE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c.py
+  --srcdir ${CMAKE_CURRENT_SOURCE_DIR}
+  --functional mgga_xc_ml25
+  --maxorder 0
+)
+
+add_custom_target(maple2c
+  COMMAND ${IFXC_MAPLE2C_ARGS}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  VERBATIM
+)
 
 add_custom_target(check-generated
   COMMAND ${IFXC_MANIFEST_CHECK_ARGS}
@@ -32,6 +45,7 @@ add_library(ifxc
   src/ifxc_eval.c
   src/ifxc_metadata.c
   src/ifxc_ml25_backend.c
+  src/ifxc_ml25_combined.c
   src/ifxc_ml25_kernels.c
 )
 

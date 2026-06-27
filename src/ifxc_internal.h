@@ -19,6 +19,8 @@ ifxc_status ifxc_ml25_eval(
     size_t nentries,
     const ifxc_deriv_entry *entries);
 
+int ifxc_ml25_has_combined_order0(void);
+
 ifxc_status ifxc_derivative_component_count(
     const ifxc_dimensions_t *dims,
     const ifxc_deriv_entry *entry,

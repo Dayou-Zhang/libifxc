@@ -4,6 +4,10 @@
  Feature order must match src/features/ifxc_ml25_features.def.
 *)
 
+(* type: mgga_exc *)
+(* features: 66 *)
+(* feature_batches: false *)
+
 ifxc_feature_set_key := "ml25":
 ifxc_feature_count := 66:
 
@@ -11,147 +15,147 @@ $include "mgga_exc/mgga_xc_ml25_common.mpl"
 
 # 0: LAK exchange
 $include "mgga_exc/mgga_x_lak.mpl"
-lak_x_h := f:
+lak_x_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 
 # 1: LAK correlation
 $include "mgga_exc/mgga_c_lak.mpl"
-lak_c_h := f:
+lak_c_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 
 # 2-7: LYP correlation terms
 $include "mgga_exc/mgga_xc_ml25_lyp_t1.mpl"
-lyp_t1_h := f:
+lyp_t1_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_lyp_t2.mpl"
-lyp_t2_h := f:
+lyp_t2_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_lyp_t3.mpl"
-lyp_t3_h := f:
+lyp_t3_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_lyp_t4.mpl"
-lyp_t4_h := f:
+lyp_t4_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_lyp_t5.mpl"
-lyp_t5_h := f:
+lyp_t5_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_lyp_t6.mpl"
-lyp_t6_h := f:
+lyp_t6_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 
 # 8-47: MN15 c terms
 $include "mgga_exc/mgga_xc_ml25_mn15_c01.mpl"
-mn15_c01_h := f:
+mn15_c01_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c02.mpl"
-mn15_c02_h := f:
+mn15_c02_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c03.mpl"
-mn15_c03_h := f:
+mn15_c03_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c04.mpl"
-mn15_c04_h := f:
+mn15_c04_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c05.mpl"
-mn15_c05_h := f:
+mn15_c05_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c06.mpl"
-mn15_c06_h := f:
+mn15_c06_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c07.mpl"
-mn15_c07_h := f:
+mn15_c07_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c08.mpl"
-mn15_c08_h := f:
+mn15_c08_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c09.mpl"
-mn15_c09_h := f:
+mn15_c09_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c10.mpl"
-mn15_c10_h := f:
+mn15_c10_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c11.mpl"
-mn15_c11_h := f:
+mn15_c11_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c12.mpl"
-mn15_c12_h := f:
+mn15_c12_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c13.mpl"
-mn15_c13_h := f:
+mn15_c13_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c14.mpl"
-mn15_c14_h := f:
+mn15_c14_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c15.mpl"
-mn15_c15_h := f:
+mn15_c15_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c16.mpl"
-mn15_c16_h := f:
+mn15_c16_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c17.mpl"
-mn15_c17_h := f:
+mn15_c17_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c18.mpl"
-mn15_c18_h := f:
+mn15_c18_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c19.mpl"
-mn15_c19_h := f:
+mn15_c19_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c20.mpl"
-mn15_c20_h := f:
+mn15_c20_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c21.mpl"
-mn15_c21_h := f:
+mn15_c21_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c22.mpl"
-mn15_c22_h := f:
+mn15_c22_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c23.mpl"
-mn15_c23_h := f:
+mn15_c23_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c24.mpl"
-mn15_c24_h := f:
+mn15_c24_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c25.mpl"
-mn15_c25_h := f:
+mn15_c25_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c26.mpl"
-mn15_c26_h := f:
+mn15_c26_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c27.mpl"
-mn15_c27_h := f:
+mn15_c27_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c28.mpl"
-mn15_c28_h := f:
+mn15_c28_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c29.mpl"
-mn15_c29_h := f:
+mn15_c29_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c30.mpl"
-mn15_c30_h := f:
+mn15_c30_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c31.mpl"
-mn15_c31_h := f:
+mn15_c31_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c32.mpl"
-mn15_c32_h := f:
+mn15_c32_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c33.mpl"
-mn15_c33_h := f:
+mn15_c33_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c34.mpl"
-mn15_c34_h := f:
+mn15_c34_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c35.mpl"
-mn15_c35_h := f:
+mn15_c35_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c36.mpl"
-mn15_c36_h := f:
+mn15_c36_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c37.mpl"
-mn15_c37_h := f:
+mn15_c37_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c38.mpl"
-mn15_c38_h := f:
+mn15_c38_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c39.mpl"
-mn15_c39_h := f:
+mn15_c39_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_c40.mpl"
-mn15_c40_h := f:
+mn15_c40_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 
 # 48-56: MN15 a terms
 $include "mgga_exc/mgga_xc_ml25_mn15_a01.mpl"
-mn15_a01_h := f:
+mn15_a01_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_a02.mpl"
-mn15_a02_h := f:
+mn15_a02_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_a03.mpl"
-mn15_a03_h := f:
+mn15_a03_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_a04.mpl"
-mn15_a04_h := f:
+mn15_a04_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_a05.mpl"
-mn15_a05_h := f:
+mn15_a05_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_a06.mpl"
-mn15_a06_h := f:
+mn15_a06_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_a07.mpl"
-mn15_a07_h := f:
+mn15_a07_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_a08.mpl"
-mn15_a08_h := f:
+mn15_a08_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_a09.mpl"
-mn15_a09_h := f:
+mn15_a09_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 
 # 57-65: MN15 b terms
 $include "mgga_exc/mgga_xc_ml25_mn15_b01.mpl"
-mn15_b01_h := f:
+mn15_b01_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_b02.mpl"
-mn15_b02_h := f:
+mn15_b02_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_b03.mpl"
-mn15_b03_h := f:
+mn15_b03_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_b04.mpl"
-mn15_b04_h := f:
+mn15_b04_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_b05.mpl"
-mn15_b05_h := f:
+mn15_b05_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_b06.mpl"
-mn15_b06_h := f:
+mn15_b06_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_b07.mpl"
-mn15_b07_h := f:
+mn15_b07_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_b08.mpl"
-mn15_b08_h := f:
+mn15_b08_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 $include "mgga_exc/mgga_xc_ml25_mn15_b09.mpl"
-mn15_b09_h := f:
+mn15_b09_h := unapply(f(rs, z, xt, xs0, xs1, u0, u1, t0, t1), rs, z, xt, xs0, xs1, u0, u1, t0, t1):
 
 ifxc_ml25_features := [
   lak_x_h,    # 0, ml25.lak_x
@@ -221,3 +225,8 @@ ifxc_ml25_features := [
   mn15_b08_h, # 64, ml25.mn15_b08
   mn15_b09_h  # 65, ml25.mn15_b09
 ]:
+
+f := proc(rs, z, xt, xs0, xs1, u0, u1, t0, t1)
+  local i;
+  return [seq(ifxc_ml25_features[i](rs, z, xt, xs0, xs1, u0, u1, t0, t1), i = 1..ifxc_feature_count)];
+end proc:

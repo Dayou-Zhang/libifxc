@@ -379,6 +379,51 @@ check_unpolarized_eval(void)
 }
 
 static void
+check_unpolarized_order0_only_eval(void)
+{
+  ifxc_func_type func;
+  double rho[2] = {0.3, 0.4};
+  double sigma[2] = {0.05, 0.02};
+  double tau[2] = {0.1, 0.11};
+  double weights[2] = {1.0, 0.5};
+  double local_out[IFXC_ML25_NFEATURES * 2];
+  double integral_out[IFXC_ML25_NFEATURES];
+  ifxc_input input = {
+    .npoints = 2,
+    .rho = rho,
+    .sigma = sigma,
+    .lapl = NULL,
+    .tau = tau,
+    .weights = weights
+  };
+  ifxc_deriv_entry local_entry = {
+    .target = IFXC_TARGET_LOCAL,
+    .order = 0,
+    .out = local_out
+  };
+  ifxc_deriv_entry integral_entry = {
+    .target = IFXC_TARGET_INTEGRAL,
+    .order = 0,
+    .out = integral_out
+  };
+
+  check_status(ifxc_init(&func, IFXC_FEATURE_SET_ML25, IFXC_UNPOLARIZED));
+  check_status(ifxc_eval(&func, &input, 2, (const ifxc_deriv_entry[]){
+    local_entry,
+    integral_entry
+  }));
+
+  check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LAK_X)],
+              -1.1433666468899044);
+  check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LAK_C)],
+              -0.07545507559977532);
+  assert(fabs(local_out[local_index(IFXC_ML25_NFEATURES, 1, IFXC_ML25_LAK_X)]) > 1e-12);
+  check_integral_matches_local(IFXC_ML25_NFEATURES, 2, local_out, integral_out, weights);
+
+  ifxc_end(&func);
+}
+
+static void
 check_polarized_eval(void)
 {
   ifxc_func_type func;
@@ -521,6 +566,7 @@ main(void)
   check_dimensions();
   check_handle();
   check_unpolarized_eval();
+  check_unpolarized_order0_only_eval();
   check_polarized_eval();
   return 0;
 }

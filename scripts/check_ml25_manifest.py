@@ -13,7 +13,9 @@ FEATURE_DEF_RE = re.compile(
     r'^IFXC_ML25_FEATURE\(\s*(\d+)\s*,\s*([A-Z0-9_]+)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(IFXC_FEATURE_KIND_[A-Z_]+)\s*\)\s*$'
 )
 INCLUDE_RE = re.compile(r'^\$include\s+"([^"]+)"\s*$')
-ASSIGN_RE = re.compile(r'^([a-z0-9_]+)\s*:=\s*f:\s*$')
+ASSIGN_RE = re.compile(
+    r'^([a-z0-9_]+)\s*:=\s*(?:f|unapply\(f\(rs,\s*z,\s*xt,\s*xs0,\s*xs1,\s*u0,\s*u1,\s*t0,\s*t1\),\s*rs,\s*z,\s*xt,\s*xs0,\s*xs1,\s*u0,\s*u1,\s*t0,\s*t1\)):\s*$'
+)
 MAPLE_KEY_RE = re.compile(r'#\s*(\d+)\s*,\s*(ml25\.[a-z0-9_]+)\s*$')
 
 REQUIRED_SUPPORT_FILES = [
@@ -30,6 +32,7 @@ FORBIDDEN_GENERATED_METADATA = [
     Path("src/generated/ifxc_mgga_xc_ml25_features.c"),
     Path("src/generated/ifxc_mgga_xc_ml25_features.h"),
 ]
+COMBINED_GENERATED_C = Path("src/maple2c/mgga_exc/mgga_xc_ml25.c")
 
 
 def read_text(path: Path) -> str:
@@ -170,6 +173,15 @@ def main(argv: list[str]) -> int:
     for generated_path in FORBIDDEN_GENERATED_METADATA:
         if (repo_root / generated_path).exists():
             return fail(f"redundant generated metadata file remains: {generated_path}")
+
+    combined_path = repo_root / COMBINED_GENERATED_C
+    if not combined_path.exists():
+        return fail(f"missing combined generated ML25 file: {COMBINED_GENERATED_C}")
+    combined_text = read_text(combined_path)
+    if "Error," in combined_text:
+        return fail(f"Maple error text remains in {COMBINED_GENERATED_C}")
+    if "out->zk[ip*p->dim.zk + 65]" not in combined_text:
+        return fail(f"{COMBINED_GENERATED_C} does not emit all 66 order-0 features")
 
     return 0
 
