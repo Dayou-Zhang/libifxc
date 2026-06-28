@@ -14,7 +14,7 @@
 #define func_kxc_pol        ADD_PREFIX(XC_PREFIX, func_kxc_pol)
 #define func_lxc_pol        ADD_PREFIX(XC_PREFIX, func_lxc_pol)
 #include XC_MAPLE2C_INC
-#include "work_mgga.c"
+#include "ifxc_work_mgga.c"
 #undef func_exc_unpol
 #undef func_vxc_unpol
 #undef func_fxc_unpol

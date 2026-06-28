@@ -5,14 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xc.h"
+#include "ifxc_mgga.h"
 
-extern xc_mgga_funcs_variants *work_mgga_ml25[];
-xc_mgga_funcs_variants *ifxc_ml25_combined_work_mgga(void);
+ifxc_mgga_funcs_variants *ifxc_ml25_combined_work_mgga(void);
+int ifxc_ml25_has_combined_order(unsigned int order);
 
-static const xc_func_info_type IFXC_ML25_PRIVATE_INFO = {
-  .number = 888,
-  .flags = XC_FLAGS_3D | XC_FLAGS_NEEDS_TAU | XC_FLAGS_HAVE_ALL,
+static const ifxc_mgga_func_info IFXC_ML25_PRIVATE_INFO = {
+  .flags = IFXC_MGGA_FLAGS_3D | IFXC_MGGA_FLAGS_NEEDS_TAU | IFXC_MGGA_FLAGS_HAVE_ALL,
   .dens_threshold = 1e-15
 };
 
@@ -54,20 +53,36 @@ static const xc_func_info_type IFXC_ML25_PRIVATE_INFO = {
   X(v4tau4)
 
 static void ifxc_ml25_free_inputs(double *rho_tm, double *sigma_tm, double *lapl_tm, double *tau_tm);
-static void ifxc_ml25_free_private_outputs(xc_mgga_out_params *out);
-static ifxc_status ifxc_ml25_eval_order0_combined(
+static void ifxc_ml25_free_private_outputs(ifxc_mgga_out_params *out);
+static ifxc_status ifxc_ml25_eval_combined(
     const ifxc_handle_impl *impl,
     const ifxc_input *input,
     size_t nentries,
-    const ifxc_deriv_entry *entries);
+    const ifxc_deriv_entry *entries,
+    unsigned int max_order);
+
+static double
+ifxc_ml25_total_density_at_point(const ifxc_input *input,
+                                 const ifxc_dimensions_t *dims,
+                                 size_t point)
+{
+  double dens = 0.0;
+  size_t comp;
+
+  for(comp = 0; comp < dims->rho; ++comp){
+    dens += input->rho[comp * input->npoints + point];
+  }
+
+  return dens;
+}
 
 static void
-ifxc_ml25_set_private_dimensions(int nspin, xc_dimensions *dim)
+ifxc_ml25_set_private_dimensions(int nspin, ifxc_mgga_dimensions *dim)
 {
   memset(dim, 0, sizeof(*dim));
   dim->zk = 1;
 
-  if(nspin == XC_UNPOLARIZED){
+  if(nspin == IFXC_MGGA_UNPOLARIZED){
     dim->rho = dim->sigma = dim->tau = 1;
     dim->vrho = dim->vsigma = dim->vtau = 1;
     dim->v2rho2 = dim->v2rhosigma = dim->v2rhotau = 1;
@@ -127,7 +142,7 @@ ifxc_ml25_set_private_dimensions(int nspin, xc_dimensions *dim)
 }
 
 static const double *
-ifxc_ml25_select_source_buffer(const xc_mgga_out_params *out, const ifxc_deriv_entry *entry)
+ifxc_ml25_select_source_buffer(const ifxc_mgga_out_params *out, const ifxc_deriv_entry *entry)
 {
   switch(entry->order){
   case 0:
@@ -289,11 +304,54 @@ ifxc_ml25_select_source_buffer(const xc_mgga_out_params *out, const ifxc_deriv_e
   }
 }
 
+static void
+ifxc_ml25_zero_dimensions_above_order(ifxc_mgga_dimensions *dims, unsigned int max_order)
+{
+  if(max_order < 4){
+    dims->v4rho4 = dims->v4rho3sigma = dims->v4rho3lapl = dims->v4rho3tau = 0;
+    dims->v4rho2sigma2 = dims->v4rho2sigmalapl = dims->v4rho2sigmatau = 0;
+    dims->v4rho2lapl2 = dims->v4rho2lapltau = dims->v4rho2tau2 = 0;
+    dims->v4rhosigma3 = dims->v4rhosigma2lapl = dims->v4rhosigma2tau = 0;
+    dims->v4rhosigmalapl2 = dims->v4rhosigmalapltau = dims->v4rhosigmatau2 = 0;
+    dims->v4rholapl3 = dims->v4rholapl2tau = dims->v4rholapltau2 = 0;
+    dims->v4rhotau3 = dims->v4sigma4 = dims->v4sigma3lapl = 0;
+    dims->v4sigma3tau = dims->v4sigma2lapl2 = dims->v4sigma2lapltau = 0;
+    dims->v4sigma2tau2 = dims->v4sigmalapl3 = dims->v4sigmalapl2tau = 0;
+    dims->v4sigmalapltau2 = dims->v4sigmatau3 = dims->v4lapl4 = 0;
+    dims->v4lapl3tau = dims->v4lapl2tau2 = dims->v4lapltau3 = dims->v4tau4 = 0;
+  }
+  if(max_order < 3){
+    dims->v3rho3 = dims->v3rho2sigma = dims->v3rho2lapl = dims->v3rho2tau = 0;
+    dims->v3rhosigma2 = dims->v3rhosigmalapl = dims->v3rhosigmatau = 0;
+    dims->v3rholapl2 = dims->v3rholapltau = dims->v3rhotau2 = 0;
+    dims->v3sigma3 = dims->v3sigma2lapl = dims->v3sigma2tau = 0;
+    dims->v3sigmalapl2 = dims->v3sigmalapltau = dims->v3sigmatau2 = 0;
+    dims->v3lapl3 = dims->v3lapl2tau = dims->v3lapltau2 = dims->v3tau3 = 0;
+  }
+  if(max_order < 2){
+    dims->v2rho2 = dims->v2rhosigma = dims->v2rholapl = dims->v2rhotau = 0;
+    dims->v2sigma2 = dims->v2sigmalapl = dims->v2sigmatau = 0;
+    dims->v2lapl2 = dims->v2lapltau = dims->v2tau2 = 0;
+  }
+  if(max_order < 1){
+    dims->vrho = dims->vsigma = dims->vlapl = dims->vtau = 0;
+  }
+}
+
+static void
+ifxc_ml25_scale_output_dimensions(ifxc_mgga_dimensions *dims, size_t nfeatures)
+{
+#define IFXC_SCALE_FIELD(name) dims->name *= (int)nfeatures;
+
+  IFXC_ML25_PRIVATE_FIELDS(IFXC_SCALE_FIELD)
+
+#undef IFXC_SCALE_FIELD
+}
+
 static ifxc_status
-ifxc_ml25_copy_feature_entry(
+ifxc_ml25_copy_combined_entry(
     const ifxc_input *input,
     const ifxc_dimensions_t *dims,
-    size_t feature_index,
     size_t nfeatures,
     const ifxc_deriv_entry *entry,
     const double *src,
@@ -302,25 +360,26 @@ ifxc_ml25_copy_feature_entry(
   size_t npoints = input->npoints;
   size_t ncomp = 0;
   size_t point;
+  size_t feature;
   ifxc_status status = ifxc_derivative_component_count(dims, entry, &ncomp);
   if(status != IFXC_OK){
     return status;
   }
 
   if(entry->target == IFXC_TARGET_LOCAL){
-    if(entry->order == 0){
-      for(point = 0; point < npoints; ++point){
-        entry->out[point * nfeatures + feature_index] = scale * src[point];
+    for(point = 0; point < npoints; ++point){
+      double point_scale = scale;
+      if(entry->order == 0){
+        point_scale *= ifxc_ml25_total_density_at_point(input, dims, point);
       }
-      return IFXC_OK;
-    }
-
-    {
-      size_t comp;
-      for(point = 0; point < npoints; ++point){
+      for(feature = 0; feature < nfeatures; ++feature){
+        size_t comp;
         for(comp = 0; comp < ncomp; ++comp){
-          size_t dest_index = (point * nfeatures + feature_index) * ncomp + comp;
-          entry->out[dest_index] = scale * src[point * ncomp + comp];
+          size_t src_index = point * nfeatures * ncomp + comp * nfeatures + feature;
+          size_t dest_index = (entry->order == 0)
+            ? point * nfeatures + feature
+            : (point * nfeatures + feature) * ncomp + comp;
+          entry->out[dest_index] = point_scale * src[src_index];
         }
       }
     }
@@ -329,20 +388,24 @@ ifxc_ml25_copy_feature_entry(
 
   if(entry->target == IFXC_TARGET_INTEGRAL){
     if(entry->order == 0){
-      double sum = 0.0;
-      for(point = 0; point < npoints; ++point){
-        sum += input->weights[point] * scale * src[point];
+      for(feature = 0; feature < nfeatures; ++feature){
+        double sum = 0.0;
+        for(point = 0; point < npoints; ++point){
+          double point_scale = scale * ifxc_ml25_total_density_at_point(input, dims, point);
+          sum += input->weights[point] * point_scale * src[point * nfeatures + feature];
+        }
+        entry->out[feature] = sum;
       }
-      entry->out[feature_index] = sum;
       return IFXC_OK;
     }
 
-    {
-      size_t comp;
-      for(point = 0; point < npoints; ++point){
+    for(point = 0; point < npoints; ++point){
+      for(feature = 0; feature < nfeatures; ++feature){
+        size_t comp;
         for(comp = 0; comp < ncomp; ++comp){
-          size_t dest_index = (point * nfeatures + feature_index) * ncomp + comp;
-          entry->out[dest_index] = input->weights[point] * scale * src[point * ncomp + comp];
+          size_t src_index = point * nfeatures * ncomp + comp * nfeatures + feature;
+          size_t dest_index = (point * nfeatures + feature) * ncomp + comp;
+          entry->out[dest_index] = input->weights[point] * scale * src[src_index];
         }
       }
     }
@@ -419,9 +482,9 @@ ifxc_ml25_free_inputs(double *rho_tm, double *sigma_tm, double *lapl_tm, double 
 
 static ifxc_status
 ifxc_ml25_allocate_private_outputs(
-    const xc_dimensions *dims,
+    const ifxc_mgga_dimensions *dims,
     size_t npoints,
-    xc_mgga_out_params *out)
+    ifxc_mgga_out_params *out)
 {
   ifxc_status status = IFXC_OK;
 
@@ -447,26 +510,8 @@ cleanup:
   return status;
 }
 
-static ifxc_status
-ifxc_ml25_allocate_combined_order0_outputs(
-    size_t nfeatures,
-    size_t npoints,
-    xc_mgga_out_params *out)
-{
-  if(npoints == 0){
-    return IFXC_OK;
-  }
-
-  out->zk = (double *)calloc(npoints * nfeatures, sizeof(double));
-  if(out->zk == NULL){
-    return IFXC_E_ALLOCATION;
-  }
-
-  return IFXC_OK;
-}
-
 static void
-ifxc_ml25_free_private_outputs(xc_mgga_out_params *out)
+ifxc_ml25_free_private_outputs(ifxc_mgga_out_params *out)
 {
 #define IFXC_FREE_FIELD(name) free(out->name);
 
@@ -475,44 +520,27 @@ ifxc_ml25_free_private_outputs(xc_mgga_out_params *out)
 #undef IFXC_FREE_FIELD
 }
 
-static void
-ifxc_ml25_zero_private_outputs(
-    const xc_dimensions *dims,
-    size_t npoints,
-    xc_mgga_out_params *out)
+static unsigned int
+ifxc_ml25_max_requested_order(size_t nentries, const ifxc_deriv_entry *entries)
 {
-#define IFXC_ZERO_FIELD(name) \
-  do { \
-    if(out->name != NULL && npoints > 0 && dims->name > 0){ \
-      memset(out->name, 0, npoints * (size_t)dims->name * sizeof(double)); \
-    } \
-  } while(0);
-
-  IFXC_ML25_PRIVATE_FIELDS(IFXC_ZERO_FIELD)
-
-#undef IFXC_ZERO_FIELD
-}
-
-static int
-ifxc_ml25_entries_are_order0(size_t nentries, const ifxc_deriv_entry *entries)
-{
+  unsigned int max_order = 0;
   size_t i;
 
   for(i = 0; i < nentries; ++i){
-    if(entries[i].order != 0){
-      return 0;
+    if(entries[i].order > max_order){
+      max_order = entries[i].order;
     }
   }
 
-  return 1;
+  return max_order;
 }
 
 static ifxc_status
-ifxc_ml25_prepare_private_func(xc_func_type *p, ifxc_nspin nspin)
+ifxc_ml25_prepare_private_func(ifxc_mgga_func_type *p, ifxc_nspin nspin)
 {
   memset(p, 0, sizeof(*p));
-  p->info = (xc_func_info_type *)&IFXC_ML25_PRIVATE_INFO;
-  p->nspin = (nspin == IFXC_POLARIZED) ? XC_POLARIZED : XC_UNPOLARIZED;
+  p->info = &IFXC_ML25_PRIVATE_INFO;
+  p->nspin = (nspin == IFXC_POLARIZED) ? IFXC_MGGA_POLARIZED : IFXC_MGGA_UNPOLARIZED;
   p->dens_threshold = p->info->dens_threshold;
   p->sigma_threshold = pow(p->dens_threshold, 4.0 / 3.0);
   p->zeta_threshold = DBL_EPSILON;
@@ -522,7 +550,7 @@ ifxc_ml25_prepare_private_func(xc_func_type *p, ifxc_nspin nspin)
 }
 
 static void
-ifxc_ml25_finish_private_func(xc_func_type *p)
+ifxc_ml25_finish_private_func(ifxc_mgga_func_type *p)
 {
   (void)p;
 }
@@ -535,20 +563,6 @@ ifxc_ml25_eval(
     const ifxc_deriv_entry *entries)
 {
   const ifxc_handle_impl *impl = (const ifxc_handle_impl *)((func != NULL) ? func->impl : NULL);
-  xc_dimensions private_dims;
-  double *rho_tm = NULL;
-  double *sigma_tm = NULL;
-  double *lapl_tm = NULL;
-  double *tau_tm = NULL;
-  xc_mgga_out_params out = {0};
-  xc_func_type p = {0};
-  ifxc_status status;
-  size_t feature_index;
-  size_t entry_index;
-  size_t npoints;
-  size_t eval_npoints;
-  xc_mgga_funcs selected_work;
-  double feature_scale;
 
   if(impl == NULL || input == NULL || entries == NULL){
     return IFXC_E_INVALID_ARGUMENT;
@@ -556,15 +570,41 @@ ifxc_ml25_eval(
   if(impl->feature_set != IFXC_FEATURE_SET_ML25){
     return IFXC_E_UNKNOWN_FEATURE_SET;
   }
-  if(ifxc_ml25_entries_are_order0(nentries, entries) && ifxc_ml25_has_combined_order0()){
-    return ifxc_ml25_eval_order0_combined(impl, input, nentries, entries);
+  {
+    unsigned int max_order = ifxc_ml25_max_requested_order(nentries, entries);
+    if(max_order <= 3 && ifxc_ml25_has_combined_order(max_order)){
+      return ifxc_ml25_eval_combined(impl, input, nentries, entries, max_order);
+    }
+    return IFXC_E_UNSUPPORTED_DERIVATIVE;
   }
+}
+
+static ifxc_status
+ifxc_ml25_eval_combined(
+    const ifxc_handle_impl *impl,
+    const ifxc_input *input,
+    size_t nentries,
+    const ifxc_deriv_entry *entries,
+    unsigned int max_order)
+{
+  ifxc_mgga_dimensions private_dims;
+  double *rho_tm = NULL;
+  double *sigma_tm = NULL;
+  double *lapl_tm = NULL;
+  double *tau_tm = NULL;
+  ifxc_mgga_out_params out = {0};
+  ifxc_mgga_func_type p = {0};
+  ifxc_status status;
+  size_t entry_index;
+  size_t npoints;
+  ifxc_mgga_funcs selected_work;
+  double feature_scale = 2.0;
 
   npoints = input->npoints;
-  feature_scale = 2.0;
-  eval_npoints = npoints;
-  ifxc_ml25_set_private_dimensions((impl->nspin == IFXC_UNPOLARIZED) ? XC_UNPOLARIZED : XC_POLARIZED,
+  ifxc_ml25_set_private_dimensions((impl->nspin == IFXC_UNPOLARIZED) ? IFXC_MGGA_UNPOLARIZED : IFXC_MGGA_POLARIZED,
                                    &private_dims);
+  ifxc_ml25_zero_dimensions_above_order(&private_dims, max_order);
+  ifxc_ml25_scale_output_dimensions(&private_dims, impl->nfeatures);
 
   status = ifxc_ml25_transpose_inputs(&impl->dims, input, &rho_tm, &sigma_tm, &lapl_tm, &tau_tm);
   if(status != IFXC_OK){
@@ -582,86 +622,9 @@ ifxc_ml25_eval(
   }
   p.dim = private_dims;
 
-  for(feature_index = 0; feature_index < impl->nfeatures; ++feature_index){
-    ifxc_ml25_zero_private_outputs(&private_dims, npoints, &out);
-    selected_work = (impl->nspin == IFXC_UNPOLARIZED)
-      ? work_mgga_ml25[feature_index + 1]->unpol[4]
-      : work_mgga_ml25[feature_index + 1]->pol[4];
-    if(selected_work == NULL){
-      status = IFXC_E_INTERNAL;
-      goto cleanup;
-    }
-    selected_work(&p, eval_npoints, rho_tm, sigma_tm, lapl_tm, tau_tm, &out);
-
-    for(entry_index = 0; entry_index < nentries; ++entry_index){
-      const ifxc_deriv_entry *entry = &entries[entry_index];
-      const double *src = ifxc_ml25_select_source_buffer(&out, entry);
-
-      if(src == NULL){
-        status = IFXC_E_INTERNAL;
-        goto cleanup;
-      }
-      status = ifxc_ml25_copy_feature_entry(
-          input, &impl->dims, feature_index, impl->nfeatures, entry, src, feature_scale);
-      if(status != IFXC_OK){
-        goto cleanup;
-      }
-    }
-  }
-
-  status = IFXC_OK;
-
-cleanup:
-  ifxc_ml25_finish_private_func(&p);
-  ifxc_ml25_free_private_outputs(&out);
-  ifxc_ml25_free_inputs(rho_tm, sigma_tm, lapl_tm, tau_tm);
-  return status;
-}
-
-static ifxc_status
-ifxc_ml25_eval_order0_combined(
-    const ifxc_handle_impl *impl,
-    const ifxc_input *input,
-    size_t nentries,
-    const ifxc_deriv_entry *entries)
-{
-  xc_dimensions private_dims;
-  double *rho_tm = NULL;
-  double *sigma_tm = NULL;
-  double *lapl_tm = NULL;
-  double *tau_tm = NULL;
-  xc_mgga_out_params out = {0};
-  xc_func_type p = {0};
-  ifxc_status status;
-  size_t entry_index;
-  size_t npoints;
-  xc_mgga_funcs selected_work;
-  double feature_scale = 2.0;
-
-  npoints = input->npoints;
-  ifxc_ml25_set_private_dimensions((impl->nspin == IFXC_UNPOLARIZED) ? XC_UNPOLARIZED : XC_POLARIZED,
-                                   &private_dims);
-  private_dims.zk = impl->nfeatures;
-
-  status = ifxc_ml25_transpose_inputs(&impl->dims, input, &rho_tm, &sigma_tm, &lapl_tm, &tau_tm);
-  if(status != IFXC_OK){
-    goto cleanup;
-  }
-
-  status = ifxc_ml25_allocate_combined_order0_outputs(impl->nfeatures, npoints, &out);
-  if(status != IFXC_OK){
-    goto cleanup;
-  }
-
-  status = ifxc_ml25_prepare_private_func(&p, impl->nspin);
-  if(status != IFXC_OK){
-    goto cleanup;
-  }
-  p.dim = private_dims;
-
   selected_work = (impl->nspin == IFXC_UNPOLARIZED)
-    ? ifxc_ml25_combined_work_mgga()->unpol[0]
-    : ifxc_ml25_combined_work_mgga()->pol[0];
+    ? ifxc_ml25_combined_work_mgga()->unpol[max_order]
+    : ifxc_ml25_combined_work_mgga()->pol[max_order];
   if(selected_work == NULL){
     status = IFXC_E_INTERNAL;
     goto cleanup;
@@ -671,26 +634,15 @@ ifxc_ml25_eval_order0_combined(
 
   for(entry_index = 0; entry_index < nentries; ++entry_index){
     const ifxc_deriv_entry *entry = &entries[entry_index];
-    size_t point;
-    size_t feature;
+    const double *src = ifxc_ml25_select_source_buffer(&out, entry);
 
-    if(entry->target == IFXC_TARGET_LOCAL){
-      for(point = 0; point < npoints; ++point){
-        for(feature = 0; feature < impl->nfeatures; ++feature){
-          size_t index = point * impl->nfeatures + feature;
-          entry->out[index] = feature_scale * out.zk[index];
-        }
-      }
-    }else if(entry->target == IFXC_TARGET_INTEGRAL){
-      for(feature = 0; feature < impl->nfeatures; ++feature){
-        double sum = 0.0;
-        for(point = 0; point < npoints; ++point){
-          sum += input->weights[point] * feature_scale * out.zk[point * impl->nfeatures + feature];
-        }
-        entry->out[feature] = sum;
-      }
-    }else{
-      status = IFXC_E_INVALID_ARGUMENT;
+    if(src == NULL){
+      status = IFXC_E_INTERNAL;
+      goto cleanup;
+    }
+    status = ifxc_ml25_copy_combined_entry(
+        input, &impl->dims, impl->nfeatures, entry, src, feature_scale);
+    if(status != IFXC_OK){
       goto cleanup;
     }
   }

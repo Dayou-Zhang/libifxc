@@ -13,10 +13,7 @@ FEATURE_DEF_RE = re.compile(
     r'^IFXC_ML25_FEATURE\(\s*(\d+)\s*,\s*([A-Z0-9_]+)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(IFXC_FEATURE_KIND_[A-Z_]+)\s*\)\s*$'
 )
 INCLUDE_RE = re.compile(r'^\$include\s+"([^"]+)"\s*$')
-ASSIGN_RE = re.compile(
-    r'^([a-z0-9_]+)\s*:=\s*(?:f|unapply\(f\(rs,\s*z,\s*xt,\s*xs0,\s*xs1,\s*u0,\s*u1,\s*t0,\s*t1\),\s*rs,\s*z,\s*xt,\s*xs0,\s*xs1,\s*u0,\s*u1,\s*t0,\s*t1\)):\s*$'
-)
-MAPLE_KEY_RE = re.compile(r'#\s*(\d+)\s*,\s*(ml25\.[a-z0-9_]+)\s*$')
+KEY_STRING_RE = re.compile(r'^"(ml25\.[a-z0-9_]+)"[,]?\s*$')
 
 REQUIRED_SUPPORT_FILES = [
     Path("maple/util.mpl"),
@@ -27,12 +24,30 @@ REQUIRED_SUPPORT_FILES = [
     Path("maple/mgga_exc/mgga_x_mn12.mpl"),
     Path("maple/mgga_exc/mgga_c_m08.mpl"),
 ]
+IF_MGGA_HELPERS = [
+    Path("maple/if_mgga/ml25_lak.mpl"),
+    Path("maple/if_mgga/ml25_lyp.mpl"),
+    Path("maple/if_mgga/ml25_mn12_terms.mpl"),
+    Path("maple/if_mgga/ml25_m08_terms.mpl"),
+]
 
 FORBIDDEN_GENERATED_METADATA = [
     Path("src/generated/ifxc_mgga_xc_ml25_features.c"),
     Path("src/generated/ifxc_mgga_xc_ml25_features.h"),
 ]
-COMBINED_GENERATED_C = Path("src/maple2c/mgga_exc/mgga_xc_ml25.c")
+FORBIDDEN_ML25_MAPLE_PATTERNS = [
+    "maple/mgga_xc_ml25.mpl",
+    "maple/mgga_exc/mgga_x_lak.mpl",
+    "maple/mgga_exc/mgga_c_lak.mpl",
+    "maple/mgga_exc/mgga_xc_ml25_*.mpl",
+]
+FORBIDDEN_ML25_GENERATED_PATTERNS = [
+    "src/ifxc_ml25_kernels.c",
+    "src/maple2c/mgga_exc/mgga_x_lak.c",
+    "src/maple2c/mgga_exc/mgga_c_lak.c",
+    "src/maple2c/mgga_exc/mgga_xc_ml25*.c",
+]
+IF_MGGA_GENERATED_C = Path("src/maple2c/if_mgga/mgga_xc_ml25.c")
 
 
 def read_text(path: Path) -> str:
@@ -59,46 +74,12 @@ def parse_feature_def(path: Path) -> list[tuple[int, str, str, str, str]]:
     return features
 
 
-def maple_include_for_key(feature_key: str) -> str:
-    suffix = feature_key.split(".", 1)[1]
-    if suffix == "lak_x":
-        return "mgga_exc/mgga_x_lak.mpl"
-    if suffix == "lak_c":
-        return "mgga_exc/mgga_c_lak.mpl"
-    return f"mgga_exc/mgga_xc_ml25_{suffix}.mpl"
-
-
-def maple_binding_for_key(feature_key: str) -> str:
-    suffix = feature_key.split(".", 1)[1]
-    return f"{suffix}_h"
-
-
-def parse_maple_formula_entries(path: Path) -> list[tuple[str, str]]:
-    entries: list[tuple[str, str]] = []
-    current_include: str | None = None
-    for raw_line in read_text(path).splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.startswith("ifxc_ml25_features := ["):
-            break
-        include_match = INCLUDE_RE.match(line)
-        if include_match:
-            current_include = include_match.group(1)
-            continue
-        assign_match = ASSIGN_RE.match(line)
-        if assign_match and current_include is not None:
-            entries.append((current_include, assign_match.group(1)))
-            current_include = None
-    return entries
-
-
-def parse_maple_keys(path: Path) -> list[tuple[int, str]]:
+def parse_maple_key_list(path: Path) -> list[tuple[int, str]]:
     keys: list[tuple[int, str]] = []
     in_vector = False
     for raw_line in read_text(path).splitlines():
         line = raw_line.strip()
-        if line.startswith("ifxc_ml25_features := ["):
+        if line.startswith("ml25_feature_keys := ["):
             in_vector = True
             continue
         if not in_vector:
@@ -107,11 +88,10 @@ def parse_maple_keys(path: Path) -> list[tuple[int, str]]:
             break
         if not line or line.startswith("#"):
             continue
-        match = MAPLE_KEY_RE.search(raw_line)
+        match = KEY_STRING_RE.match(line)
         if match:
-            keys.append((int(match.group(1)), match.group(2)))
+            keys.append((len(keys), match.group(1)))
     return keys
-
 
 def fail(message: str) -> int:
     print(message, file=sys.stderr)
@@ -126,13 +106,23 @@ def main(argv: list[str]) -> int:
 
     source_path = Path(args.source)
     feature_def_path = Path(args.feature_def)
-    repo_root = source_path.parent.parent
+    repo_root = feature_def_path.resolve().parents[2]
 
     source_text = read_text(source_path)
     if "ifxc_feature_set_key := \"ml25\":" not in source_text:
         return fail("Maple source does not advertise feature set ml25")
     if "ifxc_feature_count := 66:" not in source_text:
         return fail("Maple source does not advertise a 66-feature vector")
+    if "(* type: if_mgga *)" not in source_text:
+        return fail("ML25 source must be an IF-MGGA vector source")
+    for directive in (
+        "(* feature_set: ml25 *)",
+        "(* nfeatures: 66 *)",
+        "(* max_order: 3 *)",
+        "(* variables: rho sigma tau *)",
+    ):
+        if directive not in source_text:
+            return fail(f"missing IF-MGGA source directive: {directive}")
 
     feature_defs = parse_feature_def(feature_def_path)
     if len(feature_defs) != 66:
@@ -140,48 +130,62 @@ def main(argv: list[str]) -> int:
     if [item[0] for item in feature_defs] != list(range(66)):
         return fail("feature definition indexes are not contiguous")
 
-    maple_keys = parse_maple_keys(source_path)
+    maple_keys = parse_maple_key_list(source_path)
     if len(maple_keys) != 66:
         return fail(f"expected 66 Maple feature entries, found {len(maple_keys)}")
     if [item[0] for item in maple_keys] != list(range(66)):
         return fail("Maple feature indexes are not contiguous")
-
-    maple_entries = parse_maple_formula_entries(source_path)
-    if len(maple_entries) != 66:
-        return fail(f"expected 66 Maple feature includes, found {len(maple_entries)}")
 
     feature_keys = [item[2] for item in feature_defs]
     maple_feature_keys = [item[1] for item in maple_keys]
     if feature_keys != maple_feature_keys:
         return fail("feature def keys and Maple feature keys differ")
 
-    expected_includes = [maple_include_for_key(key) for key in feature_keys]
-    expected_bindings = [maple_binding_for_key(key) for key in feature_keys]
-    actual_includes = [item[0] for item in maple_entries]
-    actual_bindings = [item[1] for item in maple_entries]
-    if actual_includes != expected_includes:
-        return fail("Maple include list differs from feature definitions")
-    if actual_bindings != expected_bindings:
-        return fail("Maple binding list differs from feature definitions")
-
-    for include_path in expected_includes:
-        if not (source_path.parent / include_path).exists():
-            return fail(f"missing Maple include: {include_path}")
     for support_path in REQUIRED_SUPPORT_FILES:
         if not (repo_root / support_path).exists():
             return fail(f"missing Maple support file: {support_path}")
+    for helper_path in IF_MGGA_HELPERS:
+        full_helper_path = repo_root / helper_path
+        if not full_helper_path.exists():
+            return fail(f"missing IF-MGGA helper file: {helper_path}")
+        helper_include = f'$include "{helper_path.name}"'
+        if helper_include not in source_text:
+            return fail(f"IF-MGGA source does not include helper: {helper_path.name}")
+        helper_text = read_text(full_helper_path)
+        if re.search(r'(^|\n)\s*f\s*:=', helper_text):
+            return fail(f"IF-MGGA helper assigns generic f: {helper_path}")
+    for pattern in FORBIDDEN_ML25_MAPLE_PATTERNS:
+        matches = sorted(repo_root.glob(pattern))
+        if matches:
+            return fail(f"legacy ML25 Maple wrapper remains: {matches[0].relative_to(repo_root)}")
+    for pattern in FORBIDDEN_ML25_GENERATED_PATTERNS:
+        matches = sorted(repo_root.glob(pattern))
+        if matches:
+            return fail(f"legacy ML25 generated file remains: {matches[0].relative_to(repo_root)}")
     for generated_path in FORBIDDEN_GENERATED_METADATA:
         if (repo_root / generated_path).exists():
             return fail(f"redundant generated metadata file remains: {generated_path}")
 
-    combined_path = repo_root / COMBINED_GENERATED_C
+    combined_generated_c = IF_MGGA_GENERATED_C
+    combined_path = repo_root / combined_generated_c
     if not combined_path.exists():
-        return fail(f"missing combined generated ML25 file: {COMBINED_GENERATED_C}")
+        return fail(f"missing combined generated ML25 file: {combined_generated_c}")
     combined_text = read_text(combined_path)
     if "Error," in combined_text:
-        return fail(f"Maple error text remains in {COMBINED_GENERATED_C}")
+        return fail(f"Maple error text remains in {combined_generated_c}")
+    if "Type of functional: if_mgga" not in combined_text:
+        return fail(f"{combined_generated_c} was not generated as if_mgga")
+    if "#define ifxc_maple2c_order 3" not in combined_text:
+        return fail(f"{combined_generated_c} was not generated through third derivatives")
+    if "#define maple2c_order" in combined_text:
+        return fail(f"{combined_generated_c} defines unprefixed maple2c_order")
+    for flag in ("IFXC_MGGA_FLAGS_HAVE_VXC", "IFXC_MGGA_FLAGS_HAVE_FXC", "IFXC_MGGA_FLAGS_HAVE_KXC"):
+        if flag not in combined_text:
+            return fail(f"{combined_generated_c} does not advertise {flag}")
     if "out->zk[ip*p->dim.zk + 65]" not in combined_text:
-        return fail(f"{COMBINED_GENERATED_C} does not emit all 66 order-0 features")
+        return fail(f"{combined_generated_c} does not emit all 66 order-0 features")
+    if "out->vlapl" in combined_text:
+        return fail(f"{combined_generated_c} emits unsupported Laplacian derivatives")
 
     return 0
 

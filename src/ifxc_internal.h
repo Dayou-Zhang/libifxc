@@ -3,7 +3,7 @@
 
 #include "ifxc.h"
 
-#define IFXC_ML25_GENERATED_MAX_ORDER 4u
+#define IFXC_ML25_GENERATED_MAX_ORDER 3u
 
 typedef struct ifxc_handle_impl {
   int feature_set;
@@ -18,8 +18,6 @@ ifxc_status ifxc_ml25_eval(
     const ifxc_input *input,
     size_t nentries,
     const ifxc_deriv_entry *entries);
-
-int ifxc_ml25_has_combined_order0(void);
 
 ifxc_status ifxc_derivative_component_count(
     const ifxc_dimensions_t *dims,

@@ -11,7 +11,7 @@ include(CMakePackageConfigHelpers)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_program(BASH_EXECUTABLE bash)
 
-set(IFXC_MAPLE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/maple/mgga_xc_ml25.mpl)
+set(IFXC_MAPLE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/maple/if_mgga/mgga_xc_ml25.mpl)
 set(IFXC_MANIFEST_CHECK_ARGS
   ${Python3_EXECUTABLE}
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_ml25_manifest.py
@@ -23,7 +23,7 @@ set(IFXC_MAPLE2C_ARGS
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c.py
   --srcdir ${CMAKE_CURRENT_SOURCE_DIR}
   --functional mgga_xc_ml25
-  --maxorder 0
+  --maxorder 3
 )
 
 add_custom_target(maple2c
@@ -46,7 +46,6 @@ add_library(ifxc
   src/ifxc_metadata.c
   src/ifxc_ml25_backend.c
   src/ifxc_ml25_combined.c
-  src/ifxc_ml25_kernels.c
 )
 
 add_library(IFXC::ifxc ALIAS ifxc)

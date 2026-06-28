@@ -92,16 +92,20 @@ def maple_define_feature_batch_derivatives(variables, batch_derivatives, func, n
   vars = "v" + ", v".join(str(i) for i in range(len(variables)))
   needed_orders = [[] for _ in range(maxorder + 1)]
   seen = set()
-  pending = [order.copy() for order, _ in batch_derivatives]
+  pending = []
+
+  for order, name in batch_derivatives:
+    _, varorder = parse_output_name(name)
+    pending.append((order.copy(), varorder % n_features))
 
   while len(pending) > 0:
-    order = pending.pop()
-    order_key = tuple(order)
+    order, feature_index = pending.pop()
+    order_key = (tuple(order), feature_index)
     if order_key in seen or all(v == 0 for v in order):
       continue
 
     seen.add(order_key)
-    needed_orders[sum(order)].append(order)
+    needed_orders[sum(order)].append((order, feature_index))
 
     previous = order.copy()
     for i_to_derive in range(len(previous)):
@@ -110,14 +114,14 @@ def maple_define_feature_batch_derivatives(variables, batch_derivatives, func, n
         break
 
     if not all(v == 0 for v in previous):
-      pending.append(previous)
+      pending.append((previous, feature_index))
 
   out_derivatives = [""] * (maxorder + 1)
   for order_group in needed_orders:
     order_group.sort()
 
   for order_index in range(1, maxorder + 1):
-    for order in needed_orders[order_index]:
+    for order, feature_index in needed_orders[order_index]:
       previous = order.copy()
       for i_to_derive in range(len(previous)):
         if previous[i_to_derive] != 0:
@@ -125,18 +129,19 @@ def maple_define_feature_batch_derivatives(variables, batch_derivatives, func, n
           break
 
       if all(v == 0 for v in previous):
-        f_to_derive = "{}({})".format(func, vars)
+        f_to_derive = "op({}, {}({}))".format(feature_index + 1, func, vars)
       else:
-        f_to_derive = "d{}d{}({})".format(func, "".join(str(i) for i in previous), vars)
+        f_to_derive = "d{}d{}_f{}({})".format(
+          func, "".join(str(i) for i in previous), feature_index, vars)
 
-      varname = "d{}d{}".format(func, "".join(str(i) for i in order))
-      out_derivatives[order_index] += "{} := ({}) -> [seq(eval(diff(op(i, {}), v{})), i = 1..{})]:\n\n".format(
-        varname, vars, f_to_derive, next(i for i, value in enumerate(order) if value != 0), n_features)
+      varname = "d{}d{}_f{}".format(func, "".join(str(i) for i in order), feature_index)
+      out_derivatives[order_index] += "{} := ({}) -> eval(diff({}, v{})):\n\n".format(
+        varname, vars, f_to_derive, next(i for i, value in enumerate(order) if value != 0))
 
   return out_derivatives
 
 
-def maple_define_feature_batches(variant_code, maple_code, outputs, derivatives, variables, func, n_features):
+def maple_define_feature_batches(variant_code, maple_code, outputs, derivatives, variables, func, n_features, feature_batch_size=0):
   batches = []
 
   def group_by_key(items, key_getter):
@@ -170,19 +175,39 @@ def maple_define_feature_batches(variant_code, maple_code, outputs, derivatives,
       lambda item: tuple(derivative_lookup[item.split(" =", 1)[0].strip()]),
     )
 
-    for batch_outputs in output_groups:
-      batch_derivatives = []
-      for output in batch_outputs:
-        output_name = output.split(" =", 1)[0].strip()
-        batch_derivatives.append([derivative_lookup[output_name].copy(), output_name])
+    for output_group in output_groups:
+      if feature_batch_size > 0 and order > 0:
+        output_batches = [
+          output_group[i:i + feature_batch_size]
+          for i in range(0, len(output_group), feature_batch_size)
+        ]
+      else:
+        output_batches = [output_group]
 
-      batch_defs = maple_define_feature_batch_derivatives(
-        variables, batch_derivatives, func, n_features, len(derivatives) - 1)
+      for batch_outputs in output_batches:
+        batch_derivatives = []
+        for output in batch_outputs:
+          output_name = output.split(" =", 1)[0].strip()
+          batch_derivatives.append([derivative_lookup[output_name].copy(), output_name])
 
-      batches.append({
-        "start_order": order,
-        "derivatives": [batch_derivatives],
-        "code": '''
+        batch_defs = maple_define_feature_batch_derivatives(
+          variables, batch_derivatives, func, n_features, len(derivatives) - 1)
+        batch_c_outputs = batch_outputs
+        if order > 0:
+          realvars = ", ".join(variables)
+          batch_c_outputs = []
+          for der_order, output_name in batch_derivatives:
+            _, varorder = parse_output_name(output_name)
+            feature_index = varorder % n_features
+            batch_c_outputs.append("{} = d{}d{}_f{}({})".format(
+              output_name, func, "".join(str(i) for i in der_order), feature_index, realvars))
+
+        batches.append({
+          "start_order": order,
+          "label": "order {} {}".format(
+            order, batch_outputs[0].split(" =", 1)[0].strip()),
+          "derivatives": [batch_derivatives],
+          "code": '''
 {}
 
 {}
@@ -193,9 +218,9 @@ C([{}], optimize, deducetypes=false):
           variant_code,
           "".join(batch_defs[1:]),
           maple_code,
-          ", ".join(batch_outputs),
+          ", ".join(batch_c_outputs),
         )
-      })
+        })
 
   return {"batches": batches}
 
@@ -236,6 +261,11 @@ def work_mgga_exc(params):
   '''Process a MGGA functional for the energy'''
 
   derivatives = partials_to_derivatives(params, "mgga", partials)
+  if params.get("source_variables") == ["rho", "sigma", "tau"]:
+    derivatives = [
+      [der for der in der_order if "lapl" not in der[1]]
+      for der_order in derivatives
+    ]
 
   if params["n_features"] > 0:
     base_derivatives_unpol = filter_unpolarized_derivatives(derivatives)
@@ -277,7 +307,8 @@ t1   := (r0, r1, tau0, tau1) -> (tau0/2)/((r0/2)^(1 + 2/DIMENSIONS)):
           derivatives_unpol,
           variables,
           "mff",
-          params["n_features"]
+          params["n_features"],
+          params.get("feature_batch_size", 0)
         ),
 
         "pol": maple_define_feature_batches(
@@ -297,7 +328,8 @@ t1   := (r0, r1, tau0, tau1) -> tau1/(r1^(1 + 2/DIMENSIONS)):
           derivatives_pol,
           variables,
           "mff",
-          params["n_features"]
+          params["n_features"],
+          params.get("feature_batch_size", 0)
         )
       }
     else:

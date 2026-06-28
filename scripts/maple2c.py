@@ -29,6 +29,9 @@ def maple2c_init():
   params["functional"] = parse.functional
   params["maxorder"]   = parse.maxorder
   params["n_features"] = 0
+  params["feature_set"] = None
+  params["source_max_order"] = None
+  params["source_variables"] = []
   params["feature_batches"] = True
   params["simplify_begin"] = "simplify(" if parse.simplify else ""
   params["simplify_end"]   = ", symbolic)" if parse.simplify else ""
@@ -40,6 +43,7 @@ def maple2c_init():
   # find out where the maple file resides
   possible_paths = [
     params["functional"],
+    params["srcdir"] + "/maple/if_mgga/" + params["functional"],
     params["srcdir"] + "/maple/" + params["functional"],
     params["srcdir"] + "/maple/" + params["family"] + "_vxc/" + params["functional"],
     params["srcdir"] + "/maple/" + params["family"] + "_exc/" + params["functional"],
@@ -73,6 +77,22 @@ def maple2c_init():
     if m:
       params["n_features"] = int(m.group(1))
 
+    m = re.match(r'^\(\* nfeatures:\s*([0-9]+)\s*\*\)', line)
+    if m:
+      params["n_features"] = int(m.group(1))
+
+    m = re.match(r'^\(\* feature_set:\s*(\S+)\s*\*\)', line)
+    if m:
+      params["feature_set"] = m.group(1)
+
+    m = re.match(r'^\(\* max_order:\s*([0-9]+)\s*\*\)', line)
+    if m:
+      params["source_max_order"] = int(m.group(1))
+
+    m = re.match(r'^\(\* variables:\s*([^*]+?)\s*\*\)', line)
+    if m:
+      params["source_variables"] = m.group(1).split()
+
     m = re.match(r'^\(\* feature_batches:\s*(\S+)\s*\*\)', line)
     if m:
       params["feature_batches"] = m.group(1).lower() not in ("0", "false", "no", "off")
@@ -97,6 +117,7 @@ params = maple2c_init()
 from maple2c_lib.lda  import work_lda_exc, work_lda_vxc
 from maple2c_lib.gga  import work_gga_exc, work_gga_vxc
 from maple2c_lib.mgga import work_mgga_exc, work_mgga_vxc
+from maple2c_lib.if_mgga import work_if_mgga
 
 if params["functype"] == "lda_exc":
   work_lda_exc(params)
@@ -115,3 +136,6 @@ elif params["functype"] == "mgga_exc":
 
 elif params["functype"] == "mgga_vxc":
   work_mgga_vxc(params)
+
+elif params["functype"] == "if_mgga":
+  work_if_mgga(params)

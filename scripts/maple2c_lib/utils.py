@@ -302,7 +302,7 @@ def print_c_header(params, out):
   Type of functional: {}
 */
 
-#define maple2c_order {}
+#define ifxc_maple2c_order {}
 '''.format(sys.argv[0], maple_version.decode(), params['maple_file'], params['functype'], params['maxorder']))
 
 
@@ -510,14 +510,15 @@ Digits := 20:             (* constants will have 20 digits *)
 interface(warnlevel=0):   (* supress all warnings          *)
 with(CodeGeneration):
 
-$include <{}.mpl>
+$include "{}"
 
 {}
-'''.format(mtype, params["functional"], code))
+'''.format(mtype, params["maple_file"], code))
   fh.close()
 
   # include dirs for maple
-  incdirs = ("maple",
+  incdirs = ("maple/if_mgga",
+             "maple",
              "maple/lda_exc",  "maple/lda_vxc",
              "maple/gga_exc",  "maple/gga_vxc",
              "maple/mgga_exc", "maple/mgga_vxc"
@@ -733,6 +734,7 @@ def maple2c_run(params, variables, derivatives, variants, start_order, input_arg
   # open file to write to
   fname = params['srcdir'] + "/src/maple2c/" + \
     params['functype']  + "/" + params['functional'] + ".c"
+  os.makedirs(os.path.dirname(fname), exist_ok=True)
 
   from io import StringIO
   out = StringIO()
@@ -741,11 +743,11 @@ def maple2c_run(params, variables, derivatives, variants, start_order, input_arg
 
   test_2 = ("EXC", "VXC", "FXC", "KXC", "LXC", "MXC")
 
-  out.write("#define MAPLE2C_FLAGS (")
+  out.write("#define IFXC_MAPLE2C_FLAGS (")
   for i in range(start_order, params['maxorder'] + 1):
     if i != start_order:
       out.write(" | ")
-    out.write("XC_FLAGS_I_HAVE_" + test_2[i])
+    out.write("IFXC_MGGA_FLAGS_HAVE_" + test_2[i])
   out.write(")\n\n")
 
   for mtype, variant in variants.items():
@@ -768,7 +770,12 @@ def maple2c_run(params, variables, derivatives, variants, start_order, input_arg
 
     def run_batch(batch):
       batch_start = batch.get("start_order", start_order)
+      batch_label = batch.get("label")
+      if batch_label is not None:
+        print("maple2c: running {}".format(batch_label), file=sys.stderr, flush=True)
       vars_def, c_code = maple_run(params, mtype, batch["code"], batch["derivatives"], batch_start)
+      if batch_label is not None:
+        print("maple2c: finished {}".format(batch_label), file=sys.stderr, flush=True)
       return {
         "start_order": batch_start,
         "end_order": batch_start + len(batch["derivatives"]) - 1,
@@ -777,11 +784,16 @@ def maple2c_run(params, variables, derivatives, variants, start_order, input_arg
       }
 
     if len(batch_specs) > 1:
-      max_workers = min(len(batch_specs), max(1, os.cpu_count() or 1))
-      with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(run_batch, batch) for batch in batch_specs]
-        for i, future in enumerate(futures):
-          batches[i] = future.result()
+      requested_workers = params.get("max_workers", os.cpu_count() or 1)
+      max_workers = min(len(batch_specs), max(1, requested_workers))
+      if max_workers == 1:
+        for i, batch in enumerate(batch_specs):
+          batches[i] = run_batch(batch)
+      else:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+          futures = [executor.submit(run_batch, batch) for batch in batch_specs]
+          for i, future in enumerate(futures):
+            batches[i] = future.result()
     else:
       batches[0] = run_batch(batch_specs[0])
 

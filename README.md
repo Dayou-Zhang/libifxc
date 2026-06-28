@@ -29,7 +29,8 @@ Typical flow:
 4. Destroy the handle with `ifxc_end()`.
 
 For ML25, the public input uses density-variable arrays laid out by component, then point.
-Local outputs are point-major with all 66 features contiguous for each point:
+Local outputs are density-weighted kernels `h_f(r)`, point-major with all 66
+features contiguous for each point:
 
 ```text
 local[point * IFXC_ML25_NFEATURES + feature]
