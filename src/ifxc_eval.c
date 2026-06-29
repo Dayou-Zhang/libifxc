@@ -46,11 +46,12 @@ static ifxc_status
 ifxc_validate_deriv_entry(
     const ifxc_dimensions_t *dims,
     unsigned int max_order,
-    const ifxc_deriv_entry *entry)
+    const ifxc_deriv_entry *entry,
+    int require_output)
 {
   unsigned int i;
 
-  if(entry == NULL || entry->out == NULL){
+  if(entry == NULL || (require_output && entry->out == NULL)){
     return IFXC_E_INVALID_ARGUMENT;
   }
   if(entry->order > max_order){
@@ -105,7 +106,7 @@ ifxc_entry_size(const ifxc_func_type *func, const ifxc_input *input,
   if(status != IFXC_OK){
     return status;
   }
-  status = ifxc_validate_deriv_entry(&dims, max_order, entry);
+  status = ifxc_validate_deriv_entry(&dims, max_order, entry, 0);
   if(status != IFXC_OK){
     return status;
   }
@@ -176,7 +177,7 @@ ifxc_validate_eval_request(const ifxc_func_type *func, const ifxc_input *input,
   }
 
   for(i = 0; i < nentries; ++i){
-    status = ifxc_validate_deriv_entry(dims, max_order, &entries[i]);
+    status = ifxc_validate_deriv_entry(dims, max_order, &entries[i], 1);
     if(status != IFXC_OK){
       return status;
     }

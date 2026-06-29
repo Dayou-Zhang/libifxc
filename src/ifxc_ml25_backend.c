@@ -76,6 +76,19 @@ ifxc_ml25_total_density_at_point(const ifxc_input *input,
   return dens;
 }
 
+static double
+ifxc_ml25_order0_kernel(
+    const ifxc_input *input,
+    const ifxc_dimensions_t *dims,
+    size_t point,
+    double feature_scale,
+    double generated_zk_value)
+{
+  return feature_scale *
+         ifxc_ml25_total_density_at_point(input, dims, point) *
+         generated_zk_value;
+}
+
 static void
 ifxc_ml25_set_private_dimensions(int nspin, ifxc_mgga_dimensions *dim)
 {
@@ -368,10 +381,6 @@ ifxc_ml25_copy_combined_entry(
 
   if(entry->target == IFXC_TARGET_LOCAL){
     for(point = 0; point < npoints; ++point){
-      double point_scale = scale;
-      if(entry->order == 0){
-        point_scale *= ifxc_ml25_total_density_at_point(input, dims, point);
-      }
       for(feature = 0; feature < nfeatures; ++feature){
         size_t comp;
         for(comp = 0; comp < ncomp; ++comp){
@@ -379,7 +388,9 @@ ifxc_ml25_copy_combined_entry(
           size_t dest_index = (entry->order == 0)
             ? point * nfeatures + feature
             : (point * nfeatures + feature) * ncomp + comp;
-          entry->out[dest_index] = point_scale * src[src_index];
+          entry->out[dest_index] = (entry->order == 0)
+            ? ifxc_ml25_order0_kernel(input, dims, point, scale, src[src_index])
+            : scale * src[src_index];
         }
       }
     }
@@ -391,8 +402,9 @@ ifxc_ml25_copy_combined_entry(
       for(feature = 0; feature < nfeatures; ++feature){
         double sum = 0.0;
         for(point = 0; point < npoints; ++point){
-          double point_scale = scale * ifxc_ml25_total_density_at_point(input, dims, point);
-          sum += input->weights[point] * point_scale * src[point * nfeatures + feature];
+          sum += input->weights[point] *
+                 ifxc_ml25_order0_kernel(
+                     input, dims, point, scale, src[point * nfeatures + feature]);
         }
         entry->out[feature] = sum;
       }

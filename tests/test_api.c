@@ -249,6 +249,14 @@ check_error_paths(void)
   assert(ifxc_eval(&func, &input, 1, NULL) == IFXC_E_INVALID_ARGUMENT);
 
   {
+    ifxc_deriv_entry sizing_entry = entry;
+    sizing_entry.out = NULL;
+    check_status(ifxc_output_size(&func, &input, &sizing_entry, &n_double));
+    assert(n_double == IFXC_ML25_NFEATURES * input.npoints);
+    assert(ifxc_eval(&func, &input, 1, &sizing_entry) == IFXC_E_INVALID_ARGUMENT);
+  }
+
+  {
     ifxc_input missing_rho = input;
     ifxc_input missing_sigma = input;
     ifxc_input missing_tau = input;
@@ -310,7 +318,7 @@ check_output_size_matrix_for_spin(ifxc_nspin nspin)
     .target = IFXC_TARGET_LOCAL,
     .order = 0,
     .vars = NULL,
-    .out = rho
+    .out = NULL
   };
 
   check_status(ifxc_init(&func, IFXC_FEATURE_SET_ML25, nspin));
@@ -395,6 +403,31 @@ check_weighted_deriv_matches_local(
         check_close(weighted_out[idx], weights[p] * local_out[idx]);
       }
     }
+  }
+}
+
+static void
+check_ml25_sample_feature_values(
+    size_t nfeatures,
+    size_t point,
+    const double *local_out,
+    const double *expected_values)
+{
+  static const size_t features[] = {
+    IFXC_ML25_LAK_X,
+    IFXC_ML25_LAK_C,
+    IFXC_ML25_LYP_T1,
+    IFXC_ML25_MN15_C01,
+    IFXC_ML25_MN15_C20,
+    IFXC_ML25_MN15_A01,
+    IFXC_ML25_MN15_B01,
+    IFXC_ML25_MN15_B09
+  };
+  size_t i;
+
+  for(i = 0; i < sizeof(features) / sizeof(features[0]); ++i){
+    check_close(local_out[local_index(nfeatures, point, features[i])],
+                expected_values[i]);
   }
 }
 
@@ -498,6 +531,19 @@ check_unpolarized_eval(void)
               -0.01939610014525835);
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LYP_T2)],
               0.00018260498781598548);
+  {
+    static const double expected[] = {
+      -0.3430099940669713,
+      -0.022636522679932596,
+      -0.01939610014525835,
+      -0.29664934427289896,
+      -0.09959623703114227,
+      -0.03692412583283123,
+      0.001997182896612906,
+      2.8729640128347612e-05
+    };
+    check_ml25_sample_feature_values(IFXC_ML25_NFEATURES, 0, local_out, expected);
+  }
   assert(fabs(local_out[local_index(IFXC_ML25_NFEATURES, 1, IFXC_ML25_LAK_X)]) > 1e-12);
   assert(fabs(local_out[local_index(IFXC_ML25_NFEATURES, 1, IFXC_ML25_LAK_C)]) > 1e-12);
 
@@ -757,6 +803,44 @@ check_polarized_eval(void)
 }
 
 static void
+check_polarized_ml25_sample_values(void)
+{
+  ifxc_func_type func;
+  double rho[2] = {0.30, 0.20};
+  double sigma[3] = {0.06, 0.03, 0.05};
+  double tau[2] = {0.10, 0.08};
+  double local_out[IFXC_ML25_NFEATURES];
+  ifxc_input input = {
+    .npoints = 1,
+    .rho = rho,
+    .sigma = sigma,
+    .lapl = NULL,
+    .tau = tau,
+    .weights = NULL
+  };
+  ifxc_deriv_entry entry = {
+    .target = IFXC_TARGET_LOCAL,
+    .order = 0,
+    .out = local_out
+  };
+  static const double expected[] = {
+    -0.6882215860668606,
+    -0.03785794239322413,
+    -0.03279321514349554,
+    -0.5914246540028052,
+    -0.2447765626418307,
+    -0.06468940177494086,
+    0.0034137750998256312,
+    0.0001353685476186051
+  };
+
+  check_status(ifxc_init(&func, IFXC_FEATURE_SET_ML25, IFXC_POLARIZED));
+  check_status(ifxc_eval(&func, &input, 1, &entry));
+  check_ml25_sample_feature_values(IFXC_ML25_NFEATURES, 0, local_out, expected);
+  ifxc_end(&func);
+}
+
+static void
 check_deterministic_grid_for_spin(ifxc_nspin nspin)
 {
   ifxc_func_type func;
@@ -971,6 +1055,7 @@ main(void)
   check_unpolarized_eval();
   check_unpolarized_order0_only_eval();
   check_polarized_eval();
+  check_polarized_ml25_sample_values();
   check_deterministic_grid_for_spin(IFXC_UNPOLARIZED);
   check_deterministic_grid_for_spin(IFXC_POLARIZED);
   check_finite_difference_first_derivatives();

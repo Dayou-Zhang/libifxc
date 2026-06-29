@@ -206,7 +206,9 @@ typedef struct {
  *
  * Repeated variables use compact symmetric component enumeration; mixed
  * variable groups use products of those compact groups. Use ifxc_output_size()
- * to size buffers for a requested entry. */
+ * to size buffers for a requested entry; ifxc_output_size() validates entry
+ * metadata but does not require entry->out to be set. ifxc_eval() requires all
+ * requested entries to have non-NULL output buffers. */
 
 IFXC_API const char *ifxc_version_string(void);
 IFXC_API int ifxc_version_major(void);
