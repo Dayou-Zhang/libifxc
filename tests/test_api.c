@@ -524,23 +524,23 @@ check_unpolarized_eval(void)
   check_status(status);
 
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LAK_X)],
-              -0.3430099940669713);
+              -0.17150499703348565);
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LAK_C)],
-              -0.022636522679932596);
+              -0.011318261339966298);
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LYP_T1)],
-              -0.01939610014525835);
+              -0.009698050072629175);
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LYP_T2)],
-              0.00018260498781598548);
+              9.130249390799274e-05);
   {
     static const double expected[] = {
-      -0.3430099940669713,
-      -0.022636522679932596,
-      -0.01939610014525835,
-      -0.29664934427289896,
-      -0.09959623703114227,
-      -0.03692412583283123,
-      0.001997182896612906,
-      2.8729640128347612e-05
+      -0.17150499703348565,
+      -0.011318261339966298,
+      -0.009698050072629175,
+      -0.14832467213644948,
+      -0.04979811851557114,
+      -0.018462062916415615,
+      0.000998591448306453,
+      1.4364820064173806e-05
     };
     check_ml25_sample_feature_values(IFXC_ML25_NFEATURES, 0, local_out, expected);
   }
@@ -548,14 +548,14 @@ check_unpolarized_eval(void)
   assert(fabs(local_out[local_index(IFXC_ML25_NFEATURES, 1, IFXC_ML25_LAK_C)]) > 1e-12);
 
   check_close(rho_deriv_out[deriv_index(IFXC_ML25_NFEATURES, 1, 0, IFXC_ML25_LAK_X, 0)],
-              -1.5584508655337714);
+              -0.7792254327668857);
   check_close(rho_deriv_out[deriv_index(IFXC_ML25_NFEATURES, 1, 0, IFXC_ML25_LAK_C, 0)],
-              -0.08802961322078538);
+              -0.04401480661039269);
 
   check_close(rho_sigma_deriv_out[deriv_index(IFXC_ML25_NFEATURES, 1, 0, IFXC_ML25_LAK_X, 0)],
-              0.26324786692084);
+              0.13162393346042);
   check_close(rho_sigma_deriv_out[deriv_index(IFXC_ML25_NFEATURES, 1, 0, IFXC_ML25_LAK_C, 0)],
-              -0.11206861044294927);
+              -0.05603430522147464);
 
   assert(isfinite(rho_rho_tau_deriv_out[0]));
 
@@ -671,9 +671,9 @@ check_unpolarized_order0_only_eval(void)
   }));
 
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LAK_X)],
-              -0.3430099940669713);
+              -0.17150499703348565);
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LAK_C)],
-              -0.022636522679932596);
+              -0.011318261339966298);
   assert(fabs(local_out[local_index(IFXC_ML25_NFEATURES, 1, IFXC_ML25_LAK_X)]) > 1e-12);
   check_integral_matches_local(IFXC_ML25_NFEATURES, 2, local_out, integral_out, weights);
 
@@ -773,25 +773,25 @@ check_polarized_eval(void)
   check_status(status);
 
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LAK_X)],
-              -1.73746382183406);
+              -0.86873191091703);
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LAK_C)],
-              -0.08200686576627336);
+              -0.04100343288313668);
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LYP_T1)],
-              -0.06999673832468495);
+              -0.034998369162342474);
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LYP_T2)],
-              4.590975734960055e-05);
+              2.2954878674800276e-05);
   assert(fabs(local_out[local_index(IFXC_ML25_NFEATURES, 1, IFXC_ML25_LAK_X)]) > 1e-12);
   assert(fabs(local_out[local_index(IFXC_ML25_NFEATURES, 1, IFXC_ML25_LAK_C)]) > 1e-12);
 
   check_close(rho_deriv_out[deriv_index(IFXC_ML25_NFEATURES, 2, 0, IFXC_ML25_LAK_X, 0)],
-              -2.4592601851436213);
+              -1.2296300925718107);
   check_close(rho_deriv_out[deriv_index(IFXC_ML25_NFEATURES, 2, 0, IFXC_ML25_LAK_X, 1)],
-              -2.1668732002232165);
+              -1.0834366001116083);
 
   check_close(rho_sigma_deriv_out[deriv_index(IFXC_ML25_NFEATURES, 6, 0, IFXC_ML25_LAK_X, 0)],
-              0.01900933973818406);
+              0.00950466986909203);
   check_close(rho_sigma_deriv_out[deriv_index(IFXC_ML25_NFEATURES, 6, 0, IFXC_ML25_LAK_X, 2)],
-              -3.469446951953614e-18);
+              -1.734723475976807e-18);
 
   assert(isfinite(rho_rho_tau_deriv_out[0]));
 
@@ -824,14 +824,14 @@ check_polarized_ml25_sample_values(void)
     .out = local_out
   };
   static const double expected[] = {
-    -0.6882215860668606,
-    -0.03785794239322413,
-    -0.03279321514349554,
-    -0.5914246540028052,
-    -0.2447765626418307,
-    -0.06468940177494086,
-    0.0034137750998256312,
-    0.0001353685476186051
+    -0.3441107930334303,
+    -0.018928971196612066,
+    -0.01639660757174777,
+    -0.2957123270014026,
+    -0.12238828132091535,
+    -0.03234470088747043,
+    0.0017068875499128156,
+    6.768427380930255e-05
   };
 
   check_status(ifxc_init(&func, IFXC_FEATURE_SET_ML25, IFXC_POLARIZED));

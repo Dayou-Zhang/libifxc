@@ -610,7 +610,7 @@ ifxc_ml25_eval_combined(
   size_t entry_index;
   size_t npoints;
   ifxc_mgga_funcs selected_work;
-  double feature_scale = 2.0;
+  double feature_scale = 1.0;
 
   npoints = input->npoints;
   ifxc_ml25_set_private_dimensions((impl->nspin == IFXC_UNPOLARIZED) ? IFXC_MGGA_UNPOLARIZED : IFXC_MGGA_POLARIZED,
