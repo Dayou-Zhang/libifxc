@@ -60,12 +60,10 @@ static ifxc_status ifxc_ml25_eval_combined(
     size_t nentries,
     const ifxc_deriv_entry *entries,
     unsigned int max_order);
-static void ifxc_ml25_contract_first_derivative_buffer(
+static void ifxc_ml25_copy_contracted_first_derivative_buffer(
     const double *src,
-    size_t nfeatures,
     size_t ncomponents,
     size_t npoints,
-    const double *coeffs,
     double *dest);
 
 static double
@@ -676,27 +674,18 @@ cleanup:
 }
 
 static void
-ifxc_ml25_contract_first_derivative_buffer(
+ifxc_ml25_copy_contracted_first_derivative_buffer(
     const double *src,
-    size_t nfeatures,
     size_t ncomponents,
     size_t npoints,
-    const double *coeffs,
     double *dest)
 {
   size_t point;
   size_t comp;
-  size_t feature;
 
   for(comp = 0; comp < ncomponents; ++comp){
     for(point = 0; point < npoints; ++point){
-      double value = 0.0;
-      for(feature = 0; feature < nfeatures; ++feature){
-        const size_t src_index =
-            point * nfeatures * ncomponents + comp * nfeatures + feature;
-        value += coeffs[feature] * src[src_index];
-      }
-      dest[comp * npoints + point] = value;
+      dest[comp * npoints + point] = src[point * ncomponents + comp];
     }
   }
 }
@@ -738,7 +727,6 @@ ifxc_ml25_eval_first_derivatives_contracted(
       &private_dims);
   ifxc_ml25_zero_dimensions_above_order(&private_dims, 1);
   private_dims.zk = 0;
-  ifxc_ml25_scale_output_dimensions(&private_dims, impl->nfeatures);
 
   status = ifxc_ml25_transpose_inputs(&impl->dims, input, &rho_tm, &sigma_tm, &lapl_tm, &tau_tm);
   if(status != IFXC_OK){
@@ -755,6 +743,7 @@ ifxc_ml25_eval_first_derivatives_contracted(
     goto cleanup;
   }
   p.dim = private_dims;
+  p.feature_coeffs = coeffs;
 
   selected_work = (impl->nspin == IFXC_UNPOLARIZED)
     ? ifxc_ml25_combined_work_mgga()->unpol[1]
@@ -770,12 +759,12 @@ ifxc_ml25_eval_first_derivatives_contracted(
     goto cleanup;
   }
 
-  ifxc_ml25_contract_first_derivative_buffer(
-      out.vrho, impl->nfeatures, impl->dims.rho, npoints, coeffs, d_rho);
-  ifxc_ml25_contract_first_derivative_buffer(
-      out.vsigma, impl->nfeatures, impl->dims.sigma, npoints, coeffs, d_sigma);
-  ifxc_ml25_contract_first_derivative_buffer(
-      out.vtau, impl->nfeatures, impl->dims.tau, npoints, coeffs, d_tau);
+  ifxc_ml25_copy_contracted_first_derivative_buffer(
+      out.vrho, impl->dims.rho, npoints, d_rho);
+  ifxc_ml25_copy_contracted_first_derivative_buffer(
+      out.vsigma, impl->dims.sigma, npoints, d_sigma);
+  ifxc_ml25_copy_contracted_first_derivative_buffer(
+      out.vtau, impl->dims.tau, npoints, d_tau);
 
   status = IFXC_OK;
 

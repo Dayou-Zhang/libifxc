@@ -200,6 +200,7 @@ typedef struct ifxc_mgga_func_type {
   const ifxc_mgga_func_info *info;
   int nspin;
   ifxc_mgga_dimensions dim;
+  const double *feature_coeffs;
   double dens_threshold;
   double zeta_threshold;
   double sigma_threshold;

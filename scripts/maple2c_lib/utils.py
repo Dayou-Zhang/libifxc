@@ -631,6 +631,22 @@ $include "{}"
         test += " && (p->info->flags & XC_FLAGS_HAVE_" + der_name[total_order] + ")"
         output_line = "out->{}[ip*p->dim.{} + {}] += t{}{};".format(
           varname, varname, varorder, varname, varorder)
+        if actual_order == 1 and varname in ("vrho", "vsigma", "vtau"):
+          feature_index = int(varorder) % params["n_features"]
+          component_index = int(varorder) // params["n_features"]
+          output_line = (
+            "if(p->feature_coeffs != NULL) {{ "
+            "out->{varname}[ip*p->dim.{varname} + {component}] += "
+            "p->feature_coeffs[{feature}] * t{varname}{varorder}; "
+            "}} else {{ "
+            "out->{varname}[ip*p->dim.{varname} + {varorder}] += "
+            "t{varname}{varorder}; "
+            "}}"
+          ).format(
+            varname=varname,
+            component=component_index,
+            feature=feature_index,
+            varorder=varorder)
 
         if pending_output_test != test or pending_output_order != total_order:
           flush_feature_output_block()
