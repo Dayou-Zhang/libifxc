@@ -215,3 +215,41 @@ ifxc_eval(const ifxc_func_type *func, const ifxc_input *input,
   (void)impl;
   return ifxc_ml25_eval(func, input, nentries, entries);
 }
+
+ifxc_status
+ifxc_eval_ml25_first_derivatives_contracted(
+    const ifxc_func_type *func,
+    const ifxc_input *input,
+    const double *coeffs,
+    double *d_rho,
+    double *d_sigma,
+    double *d_tau)
+{
+  ifxc_dimensions_t dims;
+  ifxc_status status;
+  const ifxc_handle_impl *impl;
+
+  impl = (const ifxc_handle_impl *)((func != NULL) ? func->impl : NULL);
+  if(impl == NULL){
+    return IFXC_E_NOT_INITIALIZED;
+  }
+  if(input == NULL || coeffs == NULL || d_rho == NULL ||
+     d_sigma == NULL || d_tau == NULL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+  if(impl->feature_set != IFXC_FEATURE_SET_ML25){
+    return IFXC_E_UNKNOWN_FEATURE_SET;
+  }
+
+  status = ifxc_get_dims_from_handle(func, &dims);
+  if(status != IFXC_OK){
+    return status;
+  }
+  status = ifxc_validate_input(&dims, input);
+  if(status != IFXC_OK){
+    return status;
+  }
+
+  return ifxc_ml25_eval_first_derivatives_contracted(
+      impl, input, coeffs, d_rho, d_sigma, d_tau);
+}

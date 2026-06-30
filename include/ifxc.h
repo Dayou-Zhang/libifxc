@@ -10,7 +10,7 @@ extern "C" {
 #define IFXC_VERSION_MAJOR 0
 #define IFXC_VERSION_MINOR 1
 #define IFXC_VERSION_PATCH 0
-#define IFXC_API_VERSION 1
+#define IFXC_API_VERSION 2
 
 #define IFXC_ML25_NFEATURES 66
 
@@ -261,6 +261,24 @@ IFXC_API ifxc_status ifxc_eval(
     const ifxc_input *input,
     size_t nentries,
     const ifxc_deriv_entry *entries);
+
+/* ML25-specific fused first-derivative contraction.
+ *
+ * coeffs has IFXC_ML25_NFEATURES entries. Outputs are component-major:
+ *   d_rho[component * npoints + point]
+ *   d_sigma[component * npoints + point]
+ *   d_tau[component * npoints + point]
+ *
+ * This is equivalent to evaluating local first derivatives for rho, sigma,
+ * and tau with ifxc_eval() and contracting each feature derivative with coeffs.
+ * weights are not used. */
+IFXC_API ifxc_status ifxc_eval_ml25_first_derivatives_contracted(
+    const ifxc_func_type *func,
+    const ifxc_input *input,
+    const double *coeffs,
+    double *d_rho,
+    double *d_sigma,
+    double *d_tau);
 
 #ifdef __cplusplus
 }

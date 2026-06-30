@@ -19,6 +19,14 @@ ifxc_status ifxc_ml25_eval(
     size_t nentries,
     const ifxc_deriv_entry *entries);
 
+ifxc_status ifxc_ml25_eval_first_derivatives_contracted(
+    const ifxc_handle_impl *impl,
+    const ifxc_input *input,
+    const double *coeffs,
+    double *d_rho,
+    double *d_sigma,
+    double *d_tau);
+
 ifxc_status ifxc_derivative_component_count(
     const ifxc_dimensions_t *dims,
     const ifxc_deriv_entry *entry,

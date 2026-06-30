@@ -60,6 +60,13 @@ static ifxc_status ifxc_ml25_eval_combined(
     size_t nentries,
     const ifxc_deriv_entry *entries,
     unsigned int max_order);
+static void ifxc_ml25_contract_first_derivative_buffer(
+    const double *src,
+    size_t nfeatures,
+    size_t ncomponents,
+    size_t npoints,
+    const double *coeffs,
+    double *dest);
 
 static double
 ifxc_ml25_total_density_at_point(const ifxc_input *input,
@@ -658,6 +665,117 @@ ifxc_ml25_eval_combined(
       goto cleanup;
     }
   }
+
+  status = IFXC_OK;
+
+cleanup:
+  ifxc_ml25_finish_private_func(&p);
+  ifxc_ml25_free_private_outputs(&out);
+  ifxc_ml25_free_inputs(rho_tm, sigma_tm, lapl_tm, tau_tm);
+  return status;
+}
+
+static void
+ifxc_ml25_contract_first_derivative_buffer(
+    const double *src,
+    size_t nfeatures,
+    size_t ncomponents,
+    size_t npoints,
+    const double *coeffs,
+    double *dest)
+{
+  size_t point;
+  size_t comp;
+  size_t feature;
+
+  for(comp = 0; comp < ncomponents; ++comp){
+    for(point = 0; point < npoints; ++point){
+      double value = 0.0;
+      for(feature = 0; feature < nfeatures; ++feature){
+        const size_t src_index =
+            point * nfeatures * ncomponents + comp * nfeatures + feature;
+        value += coeffs[feature] * src[src_index];
+      }
+      dest[comp * npoints + point] = value;
+    }
+  }
+}
+
+ifxc_status
+ifxc_ml25_eval_first_derivatives_contracted(
+    const ifxc_handle_impl *impl,
+    const ifxc_input *input,
+    const double *coeffs,
+    double *d_rho,
+    double *d_sigma,
+    double *d_tau)
+{
+  ifxc_mgga_dimensions private_dims;
+  double *rho_tm = NULL;
+  double *sigma_tm = NULL;
+  double *lapl_tm = NULL;
+  double *tau_tm = NULL;
+  ifxc_mgga_out_params out = {0};
+  ifxc_mgga_func_type p = {0};
+  ifxc_status status;
+  size_t npoints;
+  ifxc_mgga_funcs selected_work;
+
+  if(impl == NULL || input == NULL || coeffs == NULL ||
+     d_rho == NULL || d_sigma == NULL || d_tau == NULL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+  if(impl->feature_set != IFXC_FEATURE_SET_ML25){
+    return IFXC_E_UNKNOWN_FEATURE_SET;
+  }
+  if(!ifxc_ml25_has_combined_order(1)){
+    return IFXC_E_UNSUPPORTED_DERIVATIVE;
+  }
+
+  npoints = input->npoints;
+  ifxc_ml25_set_private_dimensions(
+      (impl->nspin == IFXC_UNPOLARIZED) ? IFXC_MGGA_UNPOLARIZED : IFXC_MGGA_POLARIZED,
+      &private_dims);
+  ifxc_ml25_zero_dimensions_above_order(&private_dims, 1);
+  private_dims.zk = 0;
+  ifxc_ml25_scale_output_dimensions(&private_dims, impl->nfeatures);
+
+  status = ifxc_ml25_transpose_inputs(&impl->dims, input, &rho_tm, &sigma_tm, &lapl_tm, &tau_tm);
+  if(status != IFXC_OK){
+    goto cleanup;
+  }
+
+  status = ifxc_ml25_allocate_private_outputs(&private_dims, npoints, &out);
+  if(status != IFXC_OK){
+    goto cleanup;
+  }
+
+  status = ifxc_ml25_prepare_private_func(&p, impl->nspin);
+  if(status != IFXC_OK){
+    goto cleanup;
+  }
+  p.dim = private_dims;
+
+  selected_work = (impl->nspin == IFXC_UNPOLARIZED)
+    ? ifxc_ml25_combined_work_mgga()->unpol[1]
+    : ifxc_ml25_combined_work_mgga()->pol[1];
+  if(selected_work == NULL){
+    status = IFXC_E_INTERNAL;
+    goto cleanup;
+  }
+
+  selected_work(&p, npoints, rho_tm, sigma_tm, lapl_tm, tau_tm, &out);
+  if(out.vrho == NULL || out.vsigma == NULL || out.vtau == NULL){
+    status = IFXC_E_INTERNAL;
+    goto cleanup;
+  }
+
+  ifxc_ml25_contract_first_derivative_buffer(
+      out.vrho, impl->nfeatures, impl->dims.rho, npoints, coeffs, d_rho);
+  ifxc_ml25_contract_first_derivative_buffer(
+      out.vsigma, impl->nfeatures, impl->dims.sigma, npoints, coeffs, d_sigma);
+  ifxc_ml25_contract_first_derivative_buffer(
+      out.vtau, impl->nfeatures, impl->dims.tau, npoints, coeffs, d_tau);
 
   status = IFXC_OK;
 

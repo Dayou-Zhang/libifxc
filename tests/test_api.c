@@ -179,6 +179,7 @@ check_handle(void)
   assert(ifxc_version_major() == IFXC_VERSION_MAJOR);
   assert(ifxc_version_minor() == IFXC_VERSION_MINOR);
   assert(ifxc_version_patch() == IFXC_VERSION_PATCH);
+  assert(IFXC_API_VERSION == 2);
   assert(strcmp(ifxc_version_string(), "0.1.0") == 0);
 
   check_status(ifxc_init(&func, IFXC_FEATURE_SET_ML25, IFXC_POLARIZED));
@@ -1044,6 +1045,134 @@ check_finite_difference_first_derivatives(void)
   }
 }
 
+static void
+check_contracted_first_derivatives_for_spin(ifxc_nspin nspin)
+{
+  ifxc_func_type func;
+  ifxc_dimensions_t dims;
+  const size_t npoints = 3;
+  double rho[2 * 3] = {
+    0.33, 0.41, 0.49,
+    0.22, 0.28, 0.36
+  };
+  double sigma[3 * 3] = {
+    0.015, 0.019, 0.024,
+    0.006, 0.008, 0.011,
+    0.017, 0.023, 0.028
+  };
+  double tau[2 * 3] = {
+    0.070, 0.090, 0.115,
+    0.060, 0.080, 0.100
+  };
+  double coeffs[IFXC_ML25_NFEATURES];
+  double rho_deriv[IFXC_ML25_NFEATURES * 2 * 3];
+  double sigma_deriv[IFXC_ML25_NFEATURES * 3 * 3];
+  double tau_deriv[IFXC_ML25_NFEATURES * 2 * 3];
+  double contracted_rho[2 * 3];
+  double contracted_sigma[3 * 3];
+  double contracted_tau[2 * 3];
+  const ifxc_variable rho_vars[] = { IFXC_VAR_RHO };
+  const ifxc_variable sigma_vars[] = { IFXC_VAR_SIGMA };
+  const ifxc_variable tau_vars[] = { IFXC_VAR_TAU };
+  ifxc_input input = {
+    .npoints = npoints,
+    .rho = rho,
+    .sigma = sigma,
+    .lapl = NULL,
+    .tau = tau,
+    .weights = NULL
+  };
+  ifxc_deriv_entry entries[3] = {
+    {
+      .target = IFXC_TARGET_LOCAL,
+      .order = 1,
+      .vars = rho_vars,
+      .out = rho_deriv
+    },
+    {
+      .target = IFXC_TARGET_LOCAL,
+      .order = 1,
+      .vars = sigma_vars,
+      .out = sigma_deriv
+    },
+    {
+      .target = IFXC_TARGET_LOCAL,
+      .order = 1,
+      .vars = tau_vars,
+      .out = tau_deriv
+    }
+  };
+  size_t f;
+  size_t c;
+  size_t p;
+
+  if(nspin == IFXC_UNPOLARIZED){
+    rho[0] = 0.35;
+    rho[1] = 0.43;
+    rho[2] = 0.51;
+    sigma[0] = 0.018;
+    sigma[1] = 0.026;
+    sigma[2] = 0.034;
+    tau[0] = 0.080;
+    tau[1] = 0.100;
+    tau[2] = 0.130;
+  }
+
+  for(f = 0; f < IFXC_ML25_NFEATURES; ++f){
+    coeffs[f] = ((f % 7) - 3.0) * 0.031 + 0.002 * (double)f;
+  }
+
+  memset(rho_deriv, 0, sizeof(rho_deriv));
+  memset(sigma_deriv, 0, sizeof(sigma_deriv));
+  memset(tau_deriv, 0, sizeof(tau_deriv));
+  memset(contracted_rho, 0, sizeof(contracted_rho));
+  memset(contracted_sigma, 0, sizeof(contracted_sigma));
+  memset(contracted_tau, 0, sizeof(contracted_tau));
+
+  check_status(ifxc_init(&func, IFXC_FEATURE_SET_ML25, nspin));
+  check_status(ifxc_func_dimensions(&func, &dims));
+  check_status(ifxc_eval(&func, &input, 3, entries));
+  check_status(ifxc_eval_ml25_first_derivatives_contracted(
+      &func, &input, coeffs, contracted_rho, contracted_sigma, contracted_tau));
+
+  for(c = 0; c < dims.rho; ++c){
+    for(p = 0; p < npoints; ++p){
+      double expected = 0.0;
+      for(f = 0; f < IFXC_ML25_NFEATURES; ++f){
+        expected += coeffs[f] * rho_deriv[deriv_index(IFXC_ML25_NFEATURES, dims.rho, p, f, c)];
+      }
+      check_close(contracted_rho[c * npoints + p], expected);
+    }
+  }
+  for(c = 0; c < dims.sigma; ++c){
+    for(p = 0; p < npoints; ++p){
+      double expected = 0.0;
+      for(f = 0; f < IFXC_ML25_NFEATURES; ++f){
+        expected += coeffs[f] * sigma_deriv[deriv_index(IFXC_ML25_NFEATURES, dims.sigma, p, f, c)];
+      }
+      check_close(contracted_sigma[c * npoints + p], expected);
+    }
+  }
+  for(c = 0; c < dims.tau; ++c){
+    for(p = 0; p < npoints; ++p){
+      double expected = 0.0;
+      for(f = 0; f < IFXC_ML25_NFEATURES; ++f){
+        expected += coeffs[f] * tau_deriv[deriv_index(IFXC_ML25_NFEATURES, dims.tau, p, f, c)];
+      }
+      check_close(contracted_tau[c * npoints + p], expected);
+    }
+  }
+
+  ifxc_end(&func);
+}
+
+static void
+check_contracted_first_derivatives(void)
+{
+  check_contracted_first_derivatives_for_spin(IFXC_UNPOLARIZED);
+  check_contracted_first_derivatives_for_spin(IFXC_POLARIZED);
+}
+
 int
 main(void)
 {
@@ -1059,5 +1188,6 @@ main(void)
   check_deterministic_grid_for_spin(IFXC_UNPOLARIZED);
   check_deterministic_grid_for_spin(IFXC_POLARIZED);
   check_finite_difference_first_derivatives();
+  check_contracted_first_derivatives();
   return 0;
 }
