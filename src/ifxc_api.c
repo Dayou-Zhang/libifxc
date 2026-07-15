@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char IFXC_VERSION_STRING[] = "0.1.0";
+static const char IFXC_VERSION_STRING[] = "0.2.0";
 
 const char *
 ifxc_version_string(void)

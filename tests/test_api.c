@@ -179,8 +179,8 @@ check_handle(void)
   assert(ifxc_version_major() == IFXC_VERSION_MAJOR);
   assert(ifxc_version_minor() == IFXC_VERSION_MINOR);
   assert(ifxc_version_patch() == IFXC_VERSION_PATCH);
-  assert(IFXC_API_VERSION == 2);
-  assert(strcmp(ifxc_version_string(), "0.1.0") == 0);
+  assert(IFXC_API_VERSION == 3);
+  assert(strcmp(ifxc_version_string(), "0.2.0") == 0);
 
   check_status(ifxc_init(&func, IFXC_FEATURE_SET_ML25, IFXC_POLARIZED));
   check_status(ifxc_nfeatures(&func, &nfeatures));
@@ -671,6 +671,10 @@ check_unpolarized_order0_only_eval(void)
     integral_entry
   }));
 
+  /* The integral-only request uses the direct streaming accumulator. */
+  memset(integral_out, 0, sizeof(integral_out));
+  check_status(ifxc_eval(&func, &input, 1, &integral_entry));
+
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LAK_X)],
               -0.17150499703348565);
   check_close(local_out[local_index(IFXC_ML25_NFEATURES, 0, IFXC_ML25_LAK_C)],
@@ -1107,7 +1111,7 @@ check_contracted_first_derivatives_for_spin(ifxc_nspin nspin)
   size_t p;
 
   if(nspin == IFXC_UNPOLARIZED){
-    rho[0] = 0.35;
+    rho[0] = 0.5e-15;
     rho[1] = 0.43;
     rho[2] = 0.51;
     sigma[0] = 0.018;
@@ -1116,6 +1120,9 @@ check_contracted_first_derivatives_for_spin(ifxc_nspin nspin)
     tau[0] = 0.080;
     tau[1] = 0.100;
     tau[2] = 0.130;
+  }else{
+    rho[0] = 0.4e-15;
+    rho[3] = 0.5e-15;
   }
 
   for(f = 0; f < IFXC_ML25_NFEATURES; ++f){
@@ -1132,7 +1139,7 @@ check_contracted_first_derivatives_for_spin(ifxc_nspin nspin)
   check_status(ifxc_init(&func, IFXC_FEATURE_SET_ML25, nspin));
   check_status(ifxc_func_dimensions(&func, &dims));
   check_status(ifxc_eval(&func, &input, 3, entries));
-  check_status(ifxc_eval_ml25_first_derivatives_contracted(
+  check_status(ifxc_eval_first_derivatives_contracted(
       &func, &input, coeffs, contracted_rho, contracted_sigma, contracted_tau));
 
   for(c = 0; c < dims.rho; ++c){

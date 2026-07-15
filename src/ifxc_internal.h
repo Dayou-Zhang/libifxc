@@ -27,6 +27,11 @@ ifxc_status ifxc_ml25_eval_first_derivatives_contracted(
     double *d_sigma,
     double *d_tau);
 
+ifxc_status ifxc_ml25_eval_integral_order0(
+    const ifxc_handle_impl *impl,
+    const ifxc_input *input,
+    double *features);
+
 ifxc_status ifxc_derivative_component_count(
     const ifxc_dimensions_t *dims,
     const ifxc_deriv_entry *entry,
