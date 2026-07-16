@@ -8,11 +8,12 @@ extern "C" {
 #endif
 
 #define IFXC_VERSION_MAJOR 0
-#define IFXC_VERSION_MINOR 2
+#define IFXC_VERSION_MINOR 3
 #define IFXC_VERSION_PATCH 0
 #define IFXC_API_VERSION 3
 
 #define IFXC_ML25_NFEATURES 66
+#define IFXC_ML26_NFEATURES 69
 
 #define IFXC_ML25_LAK_X 0
 #define IFXC_ML25_LAK_C 1
@@ -81,6 +82,12 @@ extern "C" {
 #define IFXC_ML25_MN15_B08 64
 #define IFXC_ML25_MN15_B09 65
 
+/* ML26 preserves the complete ML25 vector at indices 0 through 65. */
+#define IFXC_ML26_ML25_NFEATURES IFXC_ML25_NFEATURES
+#define IFXC_ML26_CS1_SAME_SPIN_CONSTANT 66
+#define IFXC_ML26_CS1_SAME_SPIN_GRADIENT 67
+#define IFXC_ML26_CS1_OPPOSITE_SPIN 68
+
 #if defined(_WIN32) || defined(__CYGWIN__)
 #  if defined(IFXC_BUILD_DLL)
 #    define IFXC_API __declspec(dllexport)
@@ -112,7 +119,8 @@ typedef enum {
 } ifxc_nspin;
 
 typedef enum {
-  IFXC_FEATURE_SET_ML25 = 1
+  IFXC_FEATURE_SET_ML25 = 1,
+  IFXC_FEATURE_SET_ML26 = 2
 } ifxc_feature_set;
 
 typedef enum {
@@ -172,8 +180,8 @@ typedef struct ifxc_func_type {
  *   rho[component * npoints + point]
  *   sigma[component * npoints + point]
  *   tau[component * npoints + point]
- * ML25 does not use lapl; pass NULL for lapl. weights is required only for
- * entries whose target is IFXC_TARGET_INTEGRAL. */
+ * The current feature sets do not use lapl; pass NULL for lapl. weights is
+ * required only for entries whose target is IFXC_TARGET_INTEGRAL. */
 typedef struct {
   size_t npoints;
   const double *rho;

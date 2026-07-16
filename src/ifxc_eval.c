@@ -212,8 +212,14 @@ ifxc_eval(const ifxc_func_type *func, const ifxc_input *input,
   }
 
   (void)dims;
-  (void)impl;
-  return ifxc_ml25_eval(func, input, nentries, entries);
+  switch(impl->feature_set){
+  case IFXC_FEATURE_SET_ML25:
+    return ifxc_ml25_eval(func, input, nentries, entries);
+  case IFXC_FEATURE_SET_ML26:
+    return ifxc_ml26_eval(func, input, nentries, entries);
+  default:
+    return IFXC_E_UNKNOWN_FEATURE_SET;
+  }
 }
 
 ifxc_status
@@ -249,6 +255,8 @@ ifxc_eval_first_derivatives_contracted(
   case IFXC_FEATURE_SET_ML25:
     return ifxc_ml25_eval_first_derivatives_contracted(
         impl, input, coeffs, d_rho, d_sigma, d_tau);
+  case IFXC_FEATURE_SET_ML26:
+    return IFXC_E_UNSUPPORTED_DERIVATIVE;
   default:
     return IFXC_E_UNKNOWN_FEATURE_SET;
   }

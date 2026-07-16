@@ -4,6 +4,7 @@
 #include "ifxc.h"
 
 #define IFXC_ML25_GENERATED_MAX_ORDER 3u
+#define IFXC_ML26_GENERATED_MAX_ORDER 0u
 
 typedef struct ifxc_handle_impl {
   int feature_set;
@@ -31,6 +32,12 @@ ifxc_status ifxc_ml25_eval_integral_order0(
     const ifxc_handle_impl *impl,
     const ifxc_input *input,
     double *features);
+
+ifxc_status ifxc_ml26_eval(
+    const ifxc_func_type *func,
+    const ifxc_input *input,
+    size_t nentries,
+    const ifxc_deriv_entry *entries);
 
 ifxc_status ifxc_derivative_component_count(
     const ifxc_dimensions_t *dims,

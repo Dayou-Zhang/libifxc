@@ -1,12 +1,13 @@
 # libifxc
 
-`libifxc` is a small C library for evaluating integral-feature exchange-correlation kernels. The first release focuses on ML25 and exposes a simple IFXC-native API.
+`libifxc` is a small C library for evaluating integral-feature exchange-correlation kernels. It exposes a simple IFXC-native API for the ML25 and ML26 semilocal feature sets.
 
 This is **not** a Libxc compatibility layer. The codebase borrows useful implementation ideas from Libxc, but the public surface is intentionally different.
 
 ## How IFXC differs from Libxc
 
-- One feature set only: ML25.
+- ML25 provides 66 features through third derivatives.
+- ML26 provides an order-0 69-feature semilocal vector: the ML25 prefix plus three CS1 correlation terms.
 - ML25 is always evaluated as all 66 features together.
 - No functional registry or functional-number lookup.
 - No `xc_func_type`, `xc_func_init`, `xc_mgga`, or other Libxc public entry points.
@@ -133,8 +134,9 @@ ctest --test-dir build
 ## Notes
 
 - `IFXC_ML25_NFEATURES` is 66.
+- `IFXC_ML26_NFEATURES` is 69; its first 66 entries match ML25 and its final three entries are the switch-isolated CS1 terms.
 - `ifxc_output_size()` should be used to size derivative result buffers dynamically.
 - Higher-order derivative requests are validated against the generated maximum derivative order.
 - Derivative entries pass `vars` as a pointer of length `order`; `order == 0` may use `vars = NULL`.
 - Unsupported variables, such as `IFXC_VAR_LAPL` for ML25, fail explicitly.
-- Normal builds use checked-in generated formula C and do not require Maple. The current no-Maple manifest check verifies that ML25 metadata and the Maple manifest remain in sync.
+- Normal builds use checked-in generated formula C and do not require Maple. Manifest checks keep feature metadata aligned with the Maple sources.

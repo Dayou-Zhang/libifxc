@@ -40,6 +40,12 @@ static const int expected_public_indices[IFXC_ML25_NFEATURES] = {
 #undef IFXC_ML25_FEATURE
 };
 
+static const char *const expected_ml26_keys[IFXC_ML26_NFEATURES] = {
+#define IFXC_ML26_FEATURE(index, feature_name, feature_key, feature_group, feature_kind) feature_key,
+#include "../src/features/ifxc_ml26_features.def"
+#undef IFXC_ML26_FEATURE
+};
+
 static void
 check_close(double actual, double expected)
 {
@@ -148,6 +154,20 @@ check_metadata(void)
     assert(strcmp(feature_info->group, expected_groups[i]) == 0);
     assert(feature_info->kind == expected_kinds[i]);
   }
+
+  check_status(ifxc_feature_set_info(IFXC_FEATURE_SET_ML26, &set_info));
+  assert(set_info != NULL);
+  assert(set_info->feature_set == IFXC_FEATURE_SET_ML26);
+  assert(strcmp(set_info->key, "ml26") == 0);
+  assert(strcmp(set_info->name, "ML26 semilocal integral features") == 0);
+  assert(set_info->nfeatures == IFXC_ML26_NFEATURES);
+  assert(set_info->max_deriv_order == 0);
+  for(i = 0; i < IFXC_ML26_NFEATURES; ++i){
+    check_status(ifxc_feature_info(IFXC_FEATURE_SET_ML26, i, &feature_info));
+    assert(feature_info != NULL);
+    assert(feature_info->index == (int)i);
+    assert(strcmp(feature_info->key, expected_ml26_keys[i]) == 0);
+  }
 }
 
 static void
@@ -166,6 +186,18 @@ check_dimensions(void)
   assert(dims.sigma == 3);
   assert(dims.lapl == 0);
   assert(dims.tau == 2);
+
+  check_status(ifxc_dimensions(IFXC_FEATURE_SET_ML26, IFXC_UNPOLARIZED, &dims));
+  assert(dims.rho == 1);
+  assert(dims.sigma == 1);
+  assert(dims.lapl == 0);
+  assert(dims.tau == 1);
+
+  check_status(ifxc_dimensions(IFXC_FEATURE_SET_ML26, IFXC_POLARIZED, &dims));
+  assert(dims.rho == 2);
+  assert(dims.sigma == 3);
+  assert(dims.lapl == 0);
+  assert(dims.tau == 2);
 }
 
 static void
@@ -180,7 +212,7 @@ check_handle(void)
   assert(ifxc_version_minor() == IFXC_VERSION_MINOR);
   assert(ifxc_version_patch() == IFXC_VERSION_PATCH);
   assert(IFXC_API_VERSION == 3);
-  assert(strcmp(ifxc_version_string(), "0.2.0") == 0);
+  assert(strcmp(ifxc_version_string(), "0.3.0") == 0);
 
   check_status(ifxc_init(&func, IFXC_FEATURE_SET_ML25, IFXC_POLARIZED));
   check_status(ifxc_nfeatures(&func, &nfeatures));
@@ -192,6 +224,13 @@ check_handle(void)
   assert(dims.sigma == 3);
   assert(dims.lapl == 0);
   assert(dims.tau == 2);
+  ifxc_end(&func);
+
+  check_status(ifxc_init(&func, IFXC_FEATURE_SET_ML26, IFXC_POLARIZED));
+  check_status(ifxc_nfeatures(&func, &nfeatures));
+  assert(nfeatures == IFXC_ML26_NFEATURES);
+  check_status(ifxc_max_deriv_order(&func, &max_order));
+  assert(max_order == 0);
   ifxc_end(&func);
 }
 
@@ -1180,6 +1219,77 @@ check_contracted_first_derivatives(void)
   check_contracted_first_derivatives_for_spin(IFXC_POLARIZED);
 }
 
+static void
+check_ml26_order0_eval(void)
+{
+  ifxc_func_type ml25;
+  ifxc_func_type ml26;
+  double rho[2] = {0.3, 0.4};
+  double sigma[2] = {0.05, 0.02};
+  double tau[2] = {0.1, 0.11};
+  double weights[2] = {1.0, 0.5};
+  double ml25_integral[IFXC_ML25_NFEATURES];
+  double ml26_local[IFXC_ML26_NFEATURES * 2];
+  double ml26_integral[IFXC_ML26_NFEATURES];
+  const ifxc_variable rho_var[] = {IFXC_VAR_RHO};
+  double unsupported[IFXC_ML26_NFEATURES * 2];
+  ifxc_input input = {
+    .npoints = 2,
+    .rho = rho,
+    .sigma = sigma,
+    .lapl = NULL,
+    .tau = tau,
+    .weights = weights
+  };
+  ifxc_deriv_entry ml25_entry = {
+    .target = IFXC_TARGET_INTEGRAL,
+    .order = 0,
+    .vars = NULL,
+    .out = ml25_integral
+  };
+  ifxc_deriv_entry ml26_entries[] = {
+    {
+      .target = IFXC_TARGET_LOCAL,
+      .order = 0,
+      .vars = NULL,
+      .out = ml26_local
+    },
+    {
+      .target = IFXC_TARGET_INTEGRAL,
+      .order = 0,
+      .vars = NULL,
+      .out = ml26_integral
+    }
+  };
+  ifxc_deriv_entry unsupported_entry = {
+    .target = IFXC_TARGET_LOCAL,
+    .order = 1,
+    .vars = rho_var,
+    .out = unsupported
+  };
+  size_t feature;
+
+  check_status(ifxc_init(&ml25, IFXC_FEATURE_SET_ML25, IFXC_UNPOLARIZED));
+  check_status(ifxc_init(&ml26, IFXC_FEATURE_SET_ML26, IFXC_UNPOLARIZED));
+  check_status(ifxc_eval(&ml25, &input, 1, &ml25_entry));
+  check_status(ifxc_eval(&ml26, &input, 2, ml26_entries));
+
+  for(feature = 0; feature < IFXC_ML25_NFEATURES; ++feature){
+    check_close(ml26_integral[feature], ml25_integral[feature]);
+  }
+  check_integral_matches_local(
+      IFXC_ML26_NFEATURES, input.npoints,
+      ml26_local, ml26_integral, weights);
+  assert(isfinite(ml26_integral[IFXC_ML26_CS1_SAME_SPIN_CONSTANT]));
+  assert(isfinite(ml26_integral[IFXC_ML26_CS1_SAME_SPIN_GRADIENT]));
+  assert(isfinite(ml26_integral[IFXC_ML26_CS1_OPPOSITE_SPIN]));
+  assert(ifxc_eval(&ml26, &input, 1, &unsupported_entry) ==
+         IFXC_E_UNSUPPORTED_DERIVATIVE);
+
+  ifxc_end(&ml26);
+  ifxc_end(&ml25);
+}
+
 int
 main(void)
 {
@@ -1196,5 +1306,6 @@ main(void)
   check_deterministic_grid_for_spin(IFXC_POLARIZED);
   check_finite_difference_first_derivatives();
   check_contracted_first_derivatives();
+  check_ml26_order0_eval();
   return 0;
 }

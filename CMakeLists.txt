@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(IFXC VERSION 0.2.0 LANGUAGES C)
+project(IFXC VERSION 0.3.0 LANGUAGES C)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_TESTING "Build the test suite" ON)
@@ -11,29 +11,45 @@ include(CMakePackageConfigHelpers)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 find_program(BASH_EXECUTABLE bash)
 
-set(IFXC_MAPLE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/maple/if_mgga/mgga_xc_ml25.mpl)
+set(IFXC_ML25_MAPLE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/maple/if_mgga/mgga_xc_ml25.mpl)
+set(IFXC_ML26_MAPLE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/maple/if_mgga/mgga_xc_ml26.mpl)
 set(IFXC_MANIFEST_CHECK_ARGS
   ${Python3_EXECUTABLE}
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_ml25_manifest.py
-  --source ${IFXC_MAPLE_SOURCE}
+  --source ${IFXC_ML25_MAPLE_SOURCE}
   --feature-def ${CMAKE_CURRENT_SOURCE_DIR}/src/features/ifxc_ml25_features.def
 )
-set(IFXC_MAPLE2C_ARGS
+set(IFXC_ML26_MANIFEST_CHECK_ARGS
+  ${Python3_EXECUTABLE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_ml26_manifest.py
+  --source ${IFXC_ML26_MAPLE_SOURCE}
+  --feature-def ${CMAKE_CURRENT_SOURCE_DIR}/src/features/ifxc_ml26_features.def
+)
+set(IFXC_ML25_MAPLE2C_ARGS
   ${Python3_EXECUTABLE}
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c.py
   --srcdir ${CMAKE_CURRENT_SOURCE_DIR}
   --functional mgga_xc_ml25
   --maxorder 3
 )
+set(IFXC_ML26_MAPLE2C_ARGS
+  ${Python3_EXECUTABLE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c.py
+  --srcdir ${CMAKE_CURRENT_SOURCE_DIR}
+  --functional mgga_xc_ml26
+  --maxorder 0
+)
 
 add_custom_target(maple2c
-  COMMAND ${IFXC_MAPLE2C_ARGS}
+  COMMAND ${IFXC_ML25_MAPLE2C_ARGS}
+  COMMAND ${IFXC_ML26_MAPLE2C_ARGS}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
 )
 
 add_custom_target(check-generated
   COMMAND ${IFXC_MANIFEST_CHECK_ARGS}
+  COMMAND ${IFXC_ML26_MANIFEST_CHECK_ARGS}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   VERBATIM
 )
@@ -46,6 +62,8 @@ add_library(ifxc
   src/ifxc_metadata.c
   src/ifxc_ml25_backend.c
   src/ifxc_ml25_combined.c
+  src/ifxc_ml26_backend.c
+  src/ifxc_ml26_combined.c
 )
 
 add_library(IFXC::ifxc ALIAS ifxc)
@@ -140,7 +158,7 @@ if(BUILD_TESTING)
 
   if(BASH_EXECUTABLE)
     add_test(
-      NAME ml25_manifest
+      NAME generated_manifests
       COMMAND ${BASH_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_generated.sh ${CMAKE_CURRENT_BINARY_DIR}
     )
   endif()

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char IFXC_VERSION_STRING[] = "0.2.0";
+static const char IFXC_VERSION_STRING[] = "0.3.0";
 
 const char *
 ifxc_version_string(void)
@@ -34,6 +34,7 @@ ifxc_validate_feature_set(int feature_set)
 {
   switch(feature_set){
   case IFXC_FEATURE_SET_ML25:
+  case IFXC_FEATURE_SET_ML26:
     return IFXC_OK;
   default:
     return IFXC_E_UNKNOWN_FEATURE_SET;
@@ -75,8 +76,19 @@ ifxc_init(ifxc_func_type *func, int feature_set, ifxc_nspin nspin)
 
   impl->feature_set = feature_set;
   impl->nspin = nspin;
-  impl->nfeatures = IFXC_ML25_NFEATURES;
-  impl->max_deriv_order = IFXC_ML25_GENERATED_MAX_ORDER;
+  switch(feature_set){
+  case IFXC_FEATURE_SET_ML25:
+    impl->nfeatures = IFXC_ML25_NFEATURES;
+    impl->max_deriv_order = IFXC_ML25_GENERATED_MAX_ORDER;
+    break;
+  case IFXC_FEATURE_SET_ML26:
+    impl->nfeatures = IFXC_ML26_NFEATURES;
+    impl->max_deriv_order = IFXC_ML26_GENERATED_MAX_ORDER;
+    break;
+  default:
+    free(impl);
+    return IFXC_E_UNKNOWN_FEATURE_SET;
+  }
 
   ifxc_status status = ifxc_dimensions(feature_set, nspin, &impl->dims);
   if(status != IFXC_OK){
