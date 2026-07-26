@@ -13,7 +13,7 @@ FEATURE_DEF_RE = re.compile(
     r'^IFXC_ML25_FEATURE\(\s*(\d+)\s*,\s*([A-Z0-9_]+)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*(IFXC_FEATURE_KIND_[A-Z_]+)\s*\)\s*$'
 )
 INCLUDE_RE = re.compile(r'^\$include\s+"([^"]+)"\s*$')
-KEY_STRING_RE = re.compile(r'^"(ml25\.[a-z0-9_]+)"[,]?\s*$')
+KEY_STRING_RE = re.compile(r'^"([a-z][a-z0-9_]*)"[,]?\s*$')
 
 REQUIRED_SUPPORT_FILES = [
     Path("maple/util.mpl"),

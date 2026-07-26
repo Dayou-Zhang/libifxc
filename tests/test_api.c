@@ -1280,8 +1280,8 @@ check_ml26_order0_eval(void)
   check_integral_matches_local(
       IFXC_ML26_NFEATURES, input.npoints,
       ml26_local, ml26_integral, weights);
-  assert(isfinite(ml26_integral[IFXC_ML26_CS1_SAME_SPIN_CONSTANT]));
-  assert(isfinite(ml26_integral[IFXC_ML26_CS1_SAME_SPIN_GRADIENT]));
+  assert(isfinite(ml26_integral[IFXC_ML26_CS1_SAME_SPIN_1]));
+  assert(isfinite(ml26_integral[IFXC_ML26_CS1_SAME_SPIN_2]));
   assert(isfinite(ml26_integral[IFXC_ML26_CS1_OPPOSITE_SPIN]));
   assert(ifxc_eval(&ml26, &input, 1, &unsupported_entry) ==
          IFXC_E_UNSUPPORTED_DERIVATIVE);

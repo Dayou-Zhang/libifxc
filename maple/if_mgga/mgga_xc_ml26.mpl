@@ -19,9 +19,9 @@ ifxc_feature_count := 69:
 
 ml26_feature_keys := [
   op(ml25_feature_keys),
-  "ml26.cs1_same_spin_constant",
-  "ml26.cs1_same_spin_gradient",
-  "ml26.cs1_opposite_spin"
+  "cs1_same_spin_1",
+  "cs1_same_spin_2",
+  "cs1_opposite_spin"
 ]:
 
 ml26_cs1_gamma := 0.006:

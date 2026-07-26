@@ -39,9 +39,9 @@ def main(argv: list[str]) -> int:
             return fail(f"missing ML26 Maple directive: {directive}")
 
     labels = (
-        "ml26.cs1_same_spin_constant",
-        "ml26.cs1_same_spin_gradient",
-        "ml26.cs1_opposite_spin",
+        "cs1_same_spin_1",
+        "cs1_same_spin_2",
+        "cs1_opposite_spin",
     )
     for index, label in enumerate(labels, start=66):
         if f'"{label}"' not in source:

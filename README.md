@@ -135,6 +135,7 @@ ctest --test-dir build
 
 - `IFXC_ML25_NFEATURES` is 66.
 - `IFXC_ML26_NFEATURES` is 69; its first 66 entries match ML25 and its final three entries are the switch-isolated CS1 terms.
+- Feature keys are prefix-free labels such as `lak_x`, `mn15_cc000`, and `cs1_same_spin_1`; the feature-set key carries the ML25 or ML26 identity.
 - `ifxc_output_size()` should be used to size derivative result buffers dynamically.
 - Higher-order derivative requests are validated against the generated maximum derivative order.
 - Derivative entries pass `vars` as a pointer of length `order`; `order == 0` may use `vars = NULL`.

@@ -84,8 +84,8 @@ extern "C" {
 
 /* ML26 preserves the complete ML25 vector at indices 0 through 65. */
 #define IFXC_ML26_ML25_NFEATURES IFXC_ML25_NFEATURES
-#define IFXC_ML26_CS1_SAME_SPIN_CONSTANT 66
-#define IFXC_ML26_CS1_SAME_SPIN_GRADIENT 67
+#define IFXC_ML26_CS1_SAME_SPIN_1 66
+#define IFXC_ML26_CS1_SAME_SPIN_2 67
 #define IFXC_ML26_CS1_OPPOSITE_SPIN 68
 
 #if defined(_WIN32) || defined(__CYGWIN__)
