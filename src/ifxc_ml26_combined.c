@@ -13,6 +13,16 @@ ifxc_ml26_combined_work_mgga(void)
   return &ml26_combined_work_mgga;
 }
 
+int
+ifxc_ml26_has_combined_order(unsigned int order)
+{
+  if(order >= 5){
+    return 0;
+  }
+  return ml26_combined_work_mgga.unpol[order] != NULL &&
+         ml26_combined_work_mgga.pol[order] != NULL;
+}
+
 static int
 ifxc_ml26_prepare_component_major_point(
     const ifxc_mgga_func_type *p,
@@ -53,6 +63,81 @@ ifxc_ml26_prepare_component_major_point(
   }
 
   return 1;
+}
+
+ifxc_status
+ifxc_ml26_combined_eval_contracted_component_major(
+    const ifxc_mgga_func_type *p,
+    size_t npoints,
+    const double *rho,
+    const double *sigma,
+    const double *tau,
+    double *d_rho,
+    double *d_sigma,
+    double *d_tau)
+{
+  size_t point;
+
+  if(p == NULL || d_rho == NULL || d_sigma == NULL || d_tau == NULL ||
+     p->feature_coeffs == NULL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+  if(npoints == 0){
+    return IFXC_OK;
+  }
+  if(rho == NULL || sigma == NULL || tau == NULL){
+    return IFXC_E_INVALID_ARGUMENT;
+  }
+
+  for(point = 0; point < npoints; ++point){
+    double local_rho[2] = {0.0, 0.0};
+    double local_sigma[3] = {0.0, 0.0, 0.0};
+    double local_tau[2] = {0.0, 0.0};
+    double local_lapl[2] = {0.0, 0.0};
+    double local_d_rho[2] = {0.0, 0.0};
+    double local_d_sigma[3] = {0.0, 0.0, 0.0};
+    double local_d_tau[2] = {0.0, 0.0};
+    ifxc_mgga_out_params out = {0};
+    size_t component;
+
+    if(!ifxc_ml26_prepare_component_major_point(
+           p, npoints, point, rho, sigma, tau,
+           local_rho, local_sigma, local_tau)){
+      for(component = 0; component < (size_t)p->dim.vrho; ++component){
+        d_rho[component * npoints + point] = 0.0;
+      }
+      for(component = 0; component < (size_t)p->dim.vsigma; ++component){
+        d_sigma[component * npoints + point] = 0.0;
+      }
+      for(component = 0; component < (size_t)p->dim.vtau; ++component){
+        d_tau[component * npoints + point] = 0.0;
+      }
+      continue;
+    }
+
+    out.vrho = local_d_rho;
+    out.vsigma = local_d_sigma;
+    out.vtau = local_d_tau;
+    if(p->nspin == IFXC_MGGA_UNPOLARIZED){
+      ml26_combined_func_vxc_unpol(
+          p, 0, local_rho, local_sigma, local_lapl, local_tau, &out);
+    }else{
+      ml26_combined_func_vxc_pol(
+          p, 0, local_rho, local_sigma, local_lapl, local_tau, &out);
+    }
+
+    for(component = 0; component < (size_t)p->dim.vrho; ++component){
+      d_rho[component * npoints + point] = local_d_rho[component];
+    }
+    for(component = 0; component < (size_t)p->dim.vsigma; ++component){
+      d_sigma[component * npoints + point] = local_d_sigma[component];
+    }
+    for(component = 0; component < (size_t)p->dim.vtau; ++component){
+      d_tau[component * npoints + point] = local_d_tau[component];
+    }
+  }
+
+  return IFXC_OK;
 }
 
 ifxc_status

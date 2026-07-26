@@ -29,7 +29,7 @@ def main(argv: list[str]) -> int:
         "(* type: if_mgga *)",
         "(* feature_set: ml26 *)",
         "(* nfeatures: 69 *)",
-        "(* max_order: 0 *)",
+        "(* max_order: 2 *)",
         "(* variables: rho sigma tau *)",
         '$include "mgga_xc_ml25.mpl"',
         'ifxc_feature_set_key := "ml26":',
@@ -60,16 +60,22 @@ def main(argv: list[str]) -> int:
     generated = generated_path.read_text(encoding="utf-8")
     for marker in (
         "Type of functional: if_mgga",
-        "#define ifxc_maple2c_order 0",
+        "#define ifxc_maple2c_order 2",
         "out->zk[ip*p->dim.zk + 68]",
+        "out->vrho",
+        "out->vsigma",
+        "out->vtau",
+        "out->v2rho2",
+        "out->v2rhosigma",
+        "out->v2rhotau",
+        "out->v2sigma2",
+        "out->v2sigmatau",
+        "out->v2tau2",
     ):
         if marker not in generated:
             return fail(f"generated ML26 output is missing marker: {marker}")
     if "Error," in generated:
         return fail("Maple error text remains in generated ML26 output")
-    if "out->vrho" in generated or "out->vsigma" in generated or "out->vtau" in generated:
-        return fail("order-0 ML26 output unexpectedly contains derivatives")
-
     return 0
 
 

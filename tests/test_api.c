@@ -1234,8 +1234,14 @@ check_ml26_eval(void)
   double ml25_integral[IFXC_ML25_NFEATURES];
   double ml26_local[IFXC_ML26_NFEATURES * 2];
   double ml26_integral[IFXC_ML26_NFEATURES];
-  const ifxc_variable rho_var[] = {IFXC_VAR_RHO};
-  double rho_derivative[IFXC_ML26_NFEATURES * 2];
+  const ifxc_variable rho_vars[] = {IFXC_VAR_RHO};
+  const ifxc_variable rho2_vars[] = {IFXC_VAR_RHO, IFXC_VAR_RHO};
+  const ifxc_variable rho3_vars[] = {
+    IFXC_VAR_RHO, IFXC_VAR_RHO, IFXC_VAR_RHO
+  };
+  double first[IFXC_ML26_NFEATURES * 2];
+  double second[IFXC_ML26_NFEATURES * 2];
+  double unsupported[IFXC_ML26_NFEATURES * 2];
   ifxc_input input = {
     .npoints = 2,
     .rho = rho,
@@ -1264,11 +1270,23 @@ check_ml26_eval(void)
       .out = ml26_integral
     }
   };
-  ifxc_deriv_entry rho_derivative_entry = {
+  ifxc_deriv_entry first_entry = {
     .target = IFXC_TARGET_LOCAL,
     .order = 1,
-    .vars = rho_var,
-    .out = rho_derivative
+    .vars = rho_vars,
+    .out = first
+  };
+  ifxc_deriv_entry second_entry = {
+    .target = IFXC_TARGET_LOCAL,
+    .order = 2,
+    .vars = rho2_vars,
+    .out = second
+  };
+  ifxc_deriv_entry unsupported_entry = {
+    .target = IFXC_TARGET_LOCAL,
+    .order = 3,
+    .vars = rho3_vars,
+    .out = unsupported
   };
   size_t feature;
 
@@ -1286,11 +1304,14 @@ check_ml26_eval(void)
   assert(isfinite(ml26_integral[IFXC_ML26_CS1_SAME_SPIN_1]));
   assert(isfinite(ml26_integral[IFXC_ML26_CS1_SAME_SPIN_2]));
   assert(isfinite(ml26_integral[IFXC_ML26_CS1_OPPOSITE_SPIN]));
-  check_status(ifxc_eval(&ml26, &input, 1, &rho_derivative_entry));
-  for(feature = 0; feature < IFXC_ML26_NFEATURES; ++feature){
-    assert(isfinite(rho_derivative[feature]));
-    assert(isfinite(rho_derivative[IFXC_ML26_NFEATURES + feature]));
+  check_status(ifxc_eval(&ml26, &input, 1, &first_entry));
+  check_status(ifxc_eval(&ml26, &input, 1, &second_entry));
+  for(feature = 0; feature < IFXC_ML26_NFEATURES * input.npoints; ++feature){
+    assert(isfinite(first[feature]));
+    assert(isfinite(second[feature]));
   }
+  assert(ifxc_eval(&ml26, &input, 1, &unsupported_entry) ==
+         IFXC_E_UNSUPPORTED_DERIVATIVE);
 
   ifxc_end(&ml26);
   ifxc_end(&ml25);

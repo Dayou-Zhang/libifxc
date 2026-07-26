@@ -37,7 +37,7 @@ set(IFXC_ML26_MAPLE2C_ARGS
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c.py
   --srcdir ${CMAKE_CURRENT_SOURCE_DIR}
   --functional mgga_xc_ml26
-  --maxorder 0
+  --maxorder 2
 )
 
 add_custom_target(maple2c

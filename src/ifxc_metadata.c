@@ -13,7 +13,7 @@ static const ifxc_feature_set_info_t IFXC_ML26_FEATURE_SET_INFO = {
   .key = "ml26",
   .name = "ML26 semilocal integral features",
   .nfeatures = IFXC_ML26_NFEATURES,
-  .max_deriv_order = IFXC_ML26_MAX_ORDER
+  .max_deriv_order = IFXC_ML26_GENERATED_MAX_ORDER
 };
 
 #define IFXC_ML25_FEATURE(feature_index, feature_name, feature_key, feature_group, feature_kind) \

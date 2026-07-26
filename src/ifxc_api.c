@@ -83,7 +83,7 @@ ifxc_init(ifxc_func_type *func, int feature_set, ifxc_nspin nspin)
     break;
   case IFXC_FEATURE_SET_ML26:
     impl->nfeatures = IFXC_ML26_NFEATURES;
-    impl->max_deriv_order = IFXC_ML26_MAX_ORDER;
+    impl->max_deriv_order = IFXC_ML26_GENERATED_MAX_ORDER;
     break;
   default:
     free(impl);

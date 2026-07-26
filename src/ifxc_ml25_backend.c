@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "ifxc_mgga.h"
+#include "ifxc_vector_mgga.h"
 
 ifxc_mgga_funcs_variants *ifxc_ml25_combined_work_mgga(void);
 int ifxc_ml25_has_combined_order(unsigned int order);
@@ -69,8 +70,8 @@ static const ifxc_mgga_func_info IFXC_ML25_PRIVATE_INFO = {
   X(v4sigmatau3) \
   X(v4tau4)
 
-static void ifxc_ml25_free_inputs(double *rho_tm, double *sigma_tm, double *lapl_tm, double *tau_tm);
-static void ifxc_ml25_free_private_outputs(ifxc_mgga_out_params *out);
+void ifxc_vector_mgga_free_inputs(double *rho_tm, double *sigma_tm, double *lapl_tm, double *tau_tm);
+void ifxc_vector_mgga_free_private_outputs(ifxc_mgga_out_params *out);
 static ifxc_status ifxc_ml25_eval_combined(
     const ifxc_handle_impl *impl,
     const ifxc_input *input,
@@ -105,8 +106,8 @@ ifxc_ml25_order0_kernel(
          generated_zk_value;
 }
 
-static void
-ifxc_ml25_set_private_dimensions(int nspin, ifxc_mgga_dimensions *dim)
+void
+ifxc_vector_mgga_set_private_dimensions(int nspin, ifxc_mgga_dimensions *dim)
 {
   memset(dim, 0, sizeof(*dim));
   dim->zk = 1;
@@ -170,8 +171,8 @@ ifxc_ml25_set_private_dimensions(int nspin, ifxc_mgga_dimensions *dim)
   dim->v4tau4 = 5;
 }
 
-static const double *
-ifxc_ml25_select_source_buffer(const ifxc_mgga_out_params *out, const ifxc_deriv_entry *entry)
+const double *
+ifxc_vector_mgga_select_source_buffer(const ifxc_mgga_out_params *out, const ifxc_deriv_entry *entry)
 {
   switch(entry->order){
   case 0:
@@ -333,8 +334,8 @@ ifxc_ml25_select_source_buffer(const ifxc_mgga_out_params *out, const ifxc_deriv
   }
 }
 
-static void
-ifxc_ml25_zero_dimensions_above_order(ifxc_mgga_dimensions *dims, unsigned int max_order)
+void
+ifxc_vector_mgga_zero_dimensions_above_order(ifxc_mgga_dimensions *dims, unsigned int max_order)
 {
   if(max_order < 4){
     dims->v4rho4 = dims->v4rho3sigma = dims->v4rho3lapl = dims->v4rho3tau = 0;
@@ -367,8 +368,8 @@ ifxc_ml25_zero_dimensions_above_order(ifxc_mgga_dimensions *dims, unsigned int m
   }
 }
 
-static void
-ifxc_ml25_scale_output_dimensions(ifxc_mgga_dimensions *dims, size_t nfeatures)
+void
+ifxc_vector_mgga_scale_output_dimensions(ifxc_mgga_dimensions *dims, size_t nfeatures)
 {
 #define IFXC_SCALE_FIELD(name) dims->name *= (int)nfeatures;
 
@@ -377,8 +378,8 @@ ifxc_ml25_scale_output_dimensions(ifxc_mgga_dimensions *dims, size_t nfeatures)
 #undef IFXC_SCALE_FIELD
 }
 
-static ifxc_status
-ifxc_ml25_copy_combined_entry(
+ifxc_status
+ifxc_vector_mgga_copy_combined_entry(
     const ifxc_input *input,
     const ifxc_dimensions_t *dims,
     size_t nfeatures,
@@ -443,8 +444,8 @@ ifxc_ml25_copy_combined_entry(
   return IFXC_E_INVALID_ARGUMENT;
 }
 
-static ifxc_status
-ifxc_ml25_transpose_inputs(
+ifxc_status
+ifxc_vector_mgga_transpose_inputs(
     const ifxc_dimensions_t *dims,
     const ifxc_input *input,
     double **rho_tm,
@@ -470,7 +471,7 @@ ifxc_ml25_transpose_inputs(
   *tau_tm = (double *)calloc(npoints * dims->tau, sizeof(double));
   *lapl_tm = (double *)calloc(1, sizeof(double));
   if(*rho_tm == NULL || *sigma_tm == NULL || *tau_tm == NULL || *lapl_tm == NULL){
-    ifxc_ml25_free_inputs(*rho_tm, *sigma_tm, *lapl_tm, *tau_tm);
+    ifxc_vector_mgga_free_inputs(*rho_tm, *sigma_tm, *lapl_tm, *tau_tm);
     *rho_tm = NULL;
     *sigma_tm = NULL;
     *lapl_tm = NULL;
@@ -499,8 +500,8 @@ ifxc_ml25_transpose_inputs(
   return IFXC_OK;
 }
 
-static void
-ifxc_ml25_free_inputs(double *rho_tm, double *sigma_tm, double *lapl_tm, double *tau_tm)
+void
+ifxc_vector_mgga_free_inputs(double *rho_tm, double *sigma_tm, double *lapl_tm, double *tau_tm)
 {
   free(rho_tm);
   free(sigma_tm);
@@ -508,8 +509,8 @@ ifxc_ml25_free_inputs(double *rho_tm, double *sigma_tm, double *lapl_tm, double 
   free(tau_tm);
 }
 
-static ifxc_status
-ifxc_ml25_allocate_private_outputs(
+ifxc_status
+ifxc_vector_mgga_allocate_private_outputs(
     const ifxc_mgga_dimensions *dims,
     size_t npoints,
     ifxc_mgga_out_params *out)
@@ -533,13 +534,13 @@ ifxc_ml25_allocate_private_outputs(
   return IFXC_OK;
 
 cleanup:
-  ifxc_ml25_free_private_outputs(out);
+  ifxc_vector_mgga_free_private_outputs(out);
   memset(out, 0, sizeof(*out));
   return status;
 }
 
-static void
-ifxc_ml25_free_private_outputs(ifxc_mgga_out_params *out)
+void
+ifxc_vector_mgga_free_private_outputs(ifxc_mgga_out_params *out)
 {
 #define IFXC_FREE_FIELD(name) free(out->name);
 
@@ -548,8 +549,8 @@ ifxc_ml25_free_private_outputs(ifxc_mgga_out_params *out)
 #undef IFXC_FREE_FIELD
 }
 
-static unsigned int
-ifxc_ml25_max_requested_order(size_t nentries, const ifxc_deriv_entry *entries)
+unsigned int
+ifxc_vector_mgga_max_requested_order(size_t nentries, const ifxc_deriv_entry *entries)
 {
   unsigned int max_order = 0;
   size_t i;
@@ -603,7 +604,7 @@ ifxc_ml25_eval(
     return ifxc_ml25_eval_integral_order0(impl, input, entries[0].out);
   }
   {
-    unsigned int max_order = ifxc_ml25_max_requested_order(nentries, entries);
+    unsigned int max_order = ifxc_vector_mgga_max_requested_order(nentries, entries);
     if(max_order <= 3 && ifxc_ml25_has_combined_order(max_order)){
       return ifxc_ml25_eval_combined(impl, input, nentries, entries, max_order);
     }
@@ -633,17 +634,17 @@ ifxc_ml25_eval_combined(
   double feature_scale = 1.0;
 
   npoints = input->npoints;
-  ifxc_ml25_set_private_dimensions((impl->nspin == IFXC_UNPOLARIZED) ? IFXC_MGGA_UNPOLARIZED : IFXC_MGGA_POLARIZED,
-                                   &private_dims);
-  ifxc_ml25_zero_dimensions_above_order(&private_dims, max_order);
-  ifxc_ml25_scale_output_dimensions(&private_dims, impl->nfeatures);
+  ifxc_vector_mgga_set_private_dimensions((impl->nspin == IFXC_UNPOLARIZED) ? IFXC_MGGA_UNPOLARIZED : IFXC_MGGA_POLARIZED,
+                                          &private_dims);
+  ifxc_vector_mgga_zero_dimensions_above_order(&private_dims, max_order);
+  ifxc_vector_mgga_scale_output_dimensions(&private_dims, impl->nfeatures);
 
-  status = ifxc_ml25_transpose_inputs(&impl->dims, input, &rho_tm, &sigma_tm, &lapl_tm, &tau_tm);
+  status = ifxc_vector_mgga_transpose_inputs(&impl->dims, input, &rho_tm, &sigma_tm, &lapl_tm, &tau_tm);
   if(status != IFXC_OK){
     goto cleanup;
   }
 
-  status = ifxc_ml25_allocate_private_outputs(&private_dims, npoints, &out);
+  status = ifxc_vector_mgga_allocate_private_outputs(&private_dims, npoints, &out);
   if(status != IFXC_OK){
     goto cleanup;
   }
@@ -666,13 +667,13 @@ ifxc_ml25_eval_combined(
 
   for(entry_index = 0; entry_index < nentries; ++entry_index){
     const ifxc_deriv_entry *entry = &entries[entry_index];
-    const double *src = ifxc_ml25_select_source_buffer(&out, entry);
+    const double *src = ifxc_vector_mgga_select_source_buffer(&out, entry);
 
     if(src == NULL){
       status = IFXC_E_INTERNAL;
       goto cleanup;
     }
-    status = ifxc_ml25_copy_combined_entry(
+    status = ifxc_vector_mgga_copy_combined_entry(
         input, &impl->dims, impl->nfeatures, entry, src, feature_scale);
     if(status != IFXC_OK){
       goto cleanup;
@@ -683,8 +684,8 @@ ifxc_ml25_eval_combined(
 
 cleanup:
   ifxc_ml25_finish_private_func(&p);
-  ifxc_ml25_free_private_outputs(&out);
-  ifxc_ml25_free_inputs(rho_tm, sigma_tm, lapl_tm, tau_tm);
+  ifxc_vector_mgga_free_private_outputs(&out);
+  ifxc_vector_mgga_free_inputs(rho_tm, sigma_tm, lapl_tm, tau_tm);
   return status;
 }
 
@@ -712,10 +713,10 @@ ifxc_ml25_eval_first_derivatives_contracted(
     return IFXC_E_UNSUPPORTED_DERIVATIVE;
   }
 
-  ifxc_ml25_set_private_dimensions(
+  ifxc_vector_mgga_set_private_dimensions(
       (impl->nspin == IFXC_UNPOLARIZED) ? IFXC_MGGA_UNPOLARIZED : IFXC_MGGA_POLARIZED,
       &private_dims);
-  ifxc_ml25_zero_dimensions_above_order(&private_dims, 1);
+  ifxc_vector_mgga_zero_dimensions_above_order(&private_dims, 1);
   private_dims.zk = 0;
 
   status = ifxc_ml25_prepare_private_func(&p, impl->nspin);
@@ -752,13 +753,13 @@ ifxc_ml25_eval_integral_order0(
     return IFXC_E_UNKNOWN_FEATURE_SET;
   }
 
-  ifxc_ml25_set_private_dimensions(
+  ifxc_vector_mgga_set_private_dimensions(
       (impl->nspin == IFXC_UNPOLARIZED)
           ? IFXC_MGGA_UNPOLARIZED
           : IFXC_MGGA_POLARIZED,
       &private_dims);
-  ifxc_ml25_zero_dimensions_above_order(&private_dims, 0);
-  ifxc_ml25_scale_output_dimensions(&private_dims, impl->nfeatures);
+  ifxc_vector_mgga_zero_dimensions_above_order(&private_dims, 0);
+  ifxc_vector_mgga_scale_output_dimensions(&private_dims, impl->nfeatures);
   status = ifxc_ml25_prepare_private_func(&p, impl->nspin);
   if(status != IFXC_OK){
     return status;

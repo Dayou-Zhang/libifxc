@@ -6,7 +6,7 @@
 (* type: if_mgga *)
 (* feature_set: ml26 *)
 (* nfeatures: 69 *)
-(* max_order: 0 *)
+(* max_order: 2 *)
 (* variables: rho sigma tau *)
 (* feature_batches: false *)
 
