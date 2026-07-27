@@ -7,7 +7,8 @@ This is **not** a Libxc compatibility layer. The codebase borrows useful impleme
 ## How IFXC differs from Libxc
 
 - ML25 provides 66 features through third derivatives.
-- ML26 provides an order-0 69-feature semilocal vector: the ML25 prefix plus three CS1 correlation terms.
+- ML26 provides a 69-feature semilocal vector through second derivatives: the
+  ML25 prefix plus three CS1 correlation terms.
 - ML25 is always evaluated as all 66 features together.
 - No functional registry or functional-number lookup.
 - No `xc_func_type`, `xc_func_init`, `xc_mgga`, or other Libxc public entry points.

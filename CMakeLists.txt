@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(IFXC VERSION 0.3.0 LANGUAGES C)
+project(IFXC VERSION 0.4.0 LANGUAGES C)
 
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_TESTING "Build the test suite" ON)

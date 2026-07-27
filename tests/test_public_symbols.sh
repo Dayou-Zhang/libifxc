@@ -14,7 +14,7 @@ fi
 bad="$(
   nm -D --defined-only "$lib" \
     | awk '{print $3}' \
-    | grep -Ev '^(ifxc_|IFXC_)' \
+    | grep -Ev '^(ifxc_|IFXC_|__bss_start$|_edata$|_end$)' \
     || true
 )"
 

@@ -256,7 +256,8 @@ ifxc_eval_first_derivatives_contracted(
     return ifxc_ml25_eval_first_derivatives_contracted(
         impl, input, coeffs, d_rho, d_sigma, d_tau);
   case IFXC_FEATURE_SET_ML26:
-    return IFXC_E_UNSUPPORTED_DERIVATIVE;
+    return ifxc_ml26_eval_first_derivatives_contracted(
+        impl, input, coeffs, d_rho, d_sigma, d_tau);
   default:
     return IFXC_E_UNKNOWN_FEATURE_SET;
   }
