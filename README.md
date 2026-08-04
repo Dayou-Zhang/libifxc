@@ -1,60 +1,55 @@
 # libifxc
 
-`libifxc` is a small C library for evaluating integral-feature exchange-correlation kernels. It exposes a simple IFXC-native API for the ML25 and ML26 semilocal feature sets.
+`libifxc` is a C library for evaluating integral features in integral-feature
+density functional theory. It is heavily inspired by the
+[Libxc project](https://libxc.gitlab.io/).
 
-This is **not** a Libxc compatibility layer. The codebase borrows useful implementation ideas from Libxc, but the public surface is intentionally different.
+## Build and install
 
-## How IFXC differs from Libxc
+The build requires a C99 compiler and CMake 3.16 or newer.
 
-- ML25 provides 66 features through third derivatives.
-- ML26 provides a 69-feature semilocal vector through second derivatives: the
-  ML25 prefix plus three CS1 correlation terms.
-- ML25 is always evaluated as all 66 features together.
-- No functional registry or functional-number lookup.
-- No `xc_func_type`, `xc_func_init`, `xc_mgga`, or other Libxc public entry points.
-- No external-parameter selection path.
-- No one-functional-at-a-time wrappers.
-- No public LDA/GGA/MGGA family split.
-- The public API is centered on `ifxc_init()`, `ifxc_eval()`, and `ifxc_end()`.
-- Feature metadata is fixed and public, but it is not a registry system.
-- ML25 metadata is anchored by one combined Maple manifest, with generated formula C checked in for normal builds.
-
-## Public API summary
-
-The main header is [`include/ifxc.h`](include/ifxc.h).
-
-Typical flow:
-
-1. Initialize a handle with `ifxc_init()`.
-2. Prepare input arrays and one or more derivative entries.
-3. Call `ifxc_eval()`.
-4. Destroy the handle with `ifxc_end()`.
-
-For ML25, the public input uses density-variable arrays laid out by component, then point.
-Local outputs are density-weighted kernels `h_f(r)`, point-major with all 66
-features contiguous for each point:
-
-```text
-local[point * IFXC_ML25_NFEATURES + feature]
+```sh
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build
+cmake --install build --prefix /path/to/prefix
 ```
 
-Derivative outputs add a final component dimension:
+Generated C sources are included, so Python and Maple are not required for a
+normal build. Python 3 is needed only for generated-source validation when
+testing is enabled. Shared libraries are built by default; pass
+`-DBUILD_SHARED_LIBS=OFF` for a static library.
 
-```text
-deriv[(point * IFXC_ML25_NFEATURES + feature) * ncomponents + component]
+Installed CMake packages can be consumed with:
+
+```cmake
+find_package(IFXC CONFIG REQUIRED)
+target_link_libraries(my_target PRIVATE IFXC::ifxc)
 ```
 
-For `IFXC_TARGET_INTEGRAL`, order-0 outputs are one scalar per feature. Integral
-derivatives remain grid-resolved and include the quadrature weight:
+A `libifxc.pc` file is also installed for `pkg-config` users.
 
-```text
-integral_deriv[(point * IFXC_ML25_NFEATURES + feature) * ncomponents + component]
-  = weights[point] * local_derivative(...)
-```
+## Using the library
 
-## Minimal usage example
+Include [`ifxc.h`](include/ifxc.h) and follow the standard lifecycle:
 
-This example evaluates ML25 for two unpolarized grid points and requests both local and integral feature values.
+1. Create a feature-set handle with `ifxc_init()`.
+2. Evaluate one or more requests with `ifxc_eval()`.
+3. Release the handle with `ifxc_end()`.
+
+Use `ifxc_output_size()` to size result buffers. Feature-set and feature
+metadata are available through `ifxc_feature_set_info()` and
+`ifxc_feature_info()`.
+
+| Feature set | Features | Maximum derivative order |
+| --- | ---: | ---: |
+| ML25 | 66 | 3 |
+| ML26 | 69 | 2 |
+
+### C example
+
+This program evaluates ML25 feature integrands and their integrated values for
+two spin-unpolarized grid points:
 
 ```c
 #include <stdio.h>
@@ -108,48 +103,59 @@ int main(void)
     return 1;
   }
 
-  printf("feature 0 local at point 0: %g\n", local[0 * IFXC_ML25_NFEATURES + IFXC_ML25_LAK_X]);
-  printf("feature 0 integral: %g\n", integral[IFXC_ML25_LAK_X]);
+  printf("feature 0 local at point 0: %g\n",
+         local[IFXC_ML25_LAK_X]);
+  printf("feature 0 integral: %g\n",
+         integral[IFXC_ML25_LAK_X]);
 
   ifxc_end(&func);
   return 0;
 }
 ```
 
-### Build the example
-
-If the library is already built and installed:
-
-```sh
-cc $(pkg-config --cflags libifxc) example.c $(pkg-config --libs libifxc) -lm
-```
-
-If you are building inside this repository with CMake, the usual flow is:
+With an installed library, save the program as `example.c` and compile it
+with:
 
 ```sh
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build
+cc example.c $(pkg-config --cflags --libs libifxc) -lm -o example
 ```
 
-## Notes
+The header documents input components and output layouts. See
+[`tests/test_api.c`](tests/test_api.c) for complete local, integral, and
+derivative examples.
 
-- `IFXC_ML25_NFEATURES` is 66.
-- `IFXC_ML26_NFEATURES` is 69; its first 66 entries match ML25 and its final three entries are the switch-isolated CS1 terms.
-- Feature keys are prefix-free labels such as `lak_x`, `mn15_cc000`, and `cs1_same_spin_1`; the feature-set key carries the ML25 or ML26 identity.
-- `ifxc_output_size()` should be used to size derivative result buffers dynamically.
-- Higher-order derivative requests are validated against the generated maximum derivative order.
-- Derivative entries pass `vars` as a pointer of length `order`; `order == 0` may use `vars = NULL`.
-- Unsupported variables, such as `IFXC_VAR_LAPL` for ML25, fail explicitly.
-- Normal builds use checked-in generated formula C and do not require Maple. Manifest checks keep feature metadata aligned with the Maple sources.
+## Adding an integral-feature functional
+
+During development, add a Maple source such as
+`maple/if_mgga/mgga_xc_myfunctional.mpl`, including its `type: if_mgga`,
+`feature_set`, `nfeatures`, `max_order`, and `variables` headers. With Maple
+available, generate the C source directly:
+
+```sh
+python3 scripts/maple2c.py \
+  --srcdir . \
+  --functional mgga_xc_myfunctional \
+  --maxorder 2
+```
+
+The generated file is written to
+`src/maple2c/if_mgga/mgga_xc_myfunctional.c`. Commit it with the matching
+feature metadata and backend registration; do not edit the generated C by
+hand.
 
 ## License
 
-`libifxc` is licensed under MPL-2.0. Portions derived from Libxc retain their
-upstream copyright statements. See `LICENSE` and `NOTICE`.
+`libifxc` is licensed under MPL-2.0. See [`LICENSE`](LICENSE) and
+[`NOTICE`](NOTICE).
 
-## Authors
+## Citation
 
-- Dayou Zhang
-- Yinan Shu
-- Donald G. Truhlar
+**Software:** Zhang, D.; Shu, Y.; Truhlar, D. G. *libifxc*, version 0.4.0;
+2026. [https://github.com/Dayou-Zhang/libifxc](https://github.com/Dayou-Zhang/libifxc).
+
+**ML25:** Zhang, D.; Shu, Y.; Truhlar, D. G. Reinventing Density Functional
+Theory with Machine Learning on Integral Features. *J. Chem. Theory Comput.*
+**2026**, *22*, 6295–6303.
+[https://doi.org/10.1021/acs.jctc.6c00999](https://doi.org/10.1021/acs.jctc.6c00999).
+
+**ML26:** Zhang, D.; Shu, Y.; Truhlar, D. G. Manuscript in preparation.
