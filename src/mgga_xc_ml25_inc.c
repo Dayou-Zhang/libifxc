@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MPL-2.0 */
+
 #ifndef ADD_PREFIX
 #define ADD_PREFIX_(a, b) a ## b
 #define ADD_PREFIX(a, b) ADD_PREFIX_(a, b)

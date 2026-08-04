@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MPL-2.0
+
 prefix=${pcfiledir}/../..
 exec_prefix=${prefix}
 libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@

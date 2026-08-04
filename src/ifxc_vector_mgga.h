@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MPL-2.0 */
+
 #ifndef IFXC_VECTOR_MGGA_H
 #define IFXC_VECTOR_MGGA_H
 

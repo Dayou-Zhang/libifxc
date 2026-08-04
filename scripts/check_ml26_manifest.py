@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MPL-2.0
 """Validate ML26 manifest metadata without regenerating formula code."""
 
 from __future__ import annotations

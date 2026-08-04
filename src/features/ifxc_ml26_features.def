@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MPL-2.0 */
+
 #define IFXC_ML25_FEATURE(index, feature_name, feature_key, feature_group, feature_kind) \
   IFXC_ML26_FEATURE(index, feature_name, feature_key, feature_group, feature_kind)
 #include "ifxc_ml25_features.def"

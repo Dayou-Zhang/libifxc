@@ -142,3 +142,14 @@ ctest --test-dir build
 - Derivative entries pass `vars` as a pointer of length `order`; `order == 0` may use `vars = NULL`.
 - Unsupported variables, such as `IFXC_VAR_LAPL` for ML25, fail explicitly.
 - Normal builds use checked-in generated formula C and do not require Maple. Manifest checks keep feature metadata aligned with the Maple sources.
+
+## License
+
+`libifxc` is licensed under MPL-2.0. Portions derived from Libxc retain their
+upstream copyright statements. See `LICENSE` and `NOTICE`.
+
+## Authors
+
+- Dayou Zhang
+- Yinan Shu
+- Donald G. Truhlar

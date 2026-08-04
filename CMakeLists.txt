@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MPL-2.0
+
 cmake_minimum_required(VERSION 3.16)
 
 project(IFXC VERSION 0.4.0 LANGUAGES C)
@@ -104,6 +106,10 @@ install(TARGETS ifxc
 
 install(FILES include/ifxc.h
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(FILES LICENSE NOTICE
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/libifxc
 )
 
 install(EXPORT IFXCTargets

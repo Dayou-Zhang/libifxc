@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MPL-2.0
+
 (*
  ML25 MN12/MN15 C exchange basis terms.
 

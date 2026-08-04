@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MPL-2.0
+
 (*
  mgga_xc_ml26.mpl
  IF-MGGA source for the ML26 69-feature semilocal vector.

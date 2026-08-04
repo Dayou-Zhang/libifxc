@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MPL-2.0 */
+
 #ifndef IFXC_MATH_H
 #define IFXC_MATH_H
 

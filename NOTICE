@@ -1,0 +1,12 @@
+libifxc
+
+Authors:
+Dayou Zhang
+Yinan Shu
+Donald G. Truhlar
+
+libifxc is distributed under the Mozilla Public License 2.0. See LICENSE.
+
+Portions are derived from Libxc and retain their upstream copyright
+statements. Their existing MPL-2.0 notices remain in the corresponding source
+files.

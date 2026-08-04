@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MPL-2.0
+
 (*
  mgga_xc_ml25.mpl
  IF-MGGA source for the ML25 66-feature vector.

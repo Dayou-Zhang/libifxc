@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MPL-2.0
+
 (*
  ML25 M08 correlation basis terms used for MN15 A/B features.
 

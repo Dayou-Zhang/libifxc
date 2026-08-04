@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MPL-2.0 */
+
 #include "ifxc_internal.h"
 
 static const ifxc_feature_set_info_t IFXC_ML25_FEATURE_SET_INFO = {
