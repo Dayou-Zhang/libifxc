@@ -171,6 +171,15 @@ def main(argv: list[str]) -> int:
     if not combined_path.exists():
         return fail(f"missing combined generated ML25 file: {combined_generated_c}")
     combined_text = read_text(combined_path)
+    for marker in (
+        "This file was generated automatically with scripts/maple2c.py.",
+        "Maple source      : maple/if_mgga/mgga_xc_ml25.mpl",
+    ):
+        if marker not in combined_text:
+            return fail(f"{combined_generated_c} has a non-reproducible generated path: {marker}")
+    for absolute_home in ("/home/", "/Users/", "\\\\Users\\\\"):
+        if absolute_home in combined_text:
+            return fail(f"{combined_generated_c} exposes an absolute home path")
     if "Error," in combined_text:
         return fail(f"Maple error text remains in {combined_generated_c}")
     if "Type of functional: if_mgga" not in combined_text:

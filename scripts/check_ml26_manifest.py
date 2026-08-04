@@ -59,6 +59,15 @@ def main(argv: list[str]) -> int:
         return fail("missing generated ML26 Maple2C output")
     generated = generated_path.read_text(encoding="utf-8")
     for marker in (
+        "This file was generated automatically with scripts/maple2c.py.",
+        "Maple source      : maple/if_mgga/mgga_xc_ml26.mpl",
+    ):
+        if marker not in generated:
+            return fail(f"generated ML26 output has a non-reproducible path: {marker}")
+    for absolute_home in ("/home/", "/Users/", "\\\\Users\\\\"):
+        if absolute_home in generated:
+            return fail("generated ML26 output exposes an absolute home path")
+    for marker in (
         "Type of functional: if_mgga",
         "#define ifxc_maple2c_order 2",
         "out->zk[ip*p->dim.zk + 68]",

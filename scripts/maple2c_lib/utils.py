@@ -279,6 +279,14 @@ dmfd01 := (v0, v1) ->  eval(diff(mf(v0, v1), v1)):
   return out_derivatives, out_cgeneration
 
 
+def repository_relative_path(params, path):
+  repo_root = os.path.abspath(params["srcdir"])
+  relative_path = os.path.relpath(os.path.abspath(path), repo_root)
+  if relative_path == os.pardir or relative_path.startswith(os.pardir + os.sep):
+    raise ValueError("Generated source path is outside the repository: {}".format(path))
+  return relative_path.replace(os.sep, "/")
+
+
 def print_c_header(params, out):
   # Check for license expiry
   cmd = "echo -e 'quit;' | maple 2>&1 | grep License | head -n 1"
@@ -303,7 +311,11 @@ def print_c_header(params, out):
 */
 
 #define ifxc_maple2c_order {}
-'''.format(sys.argv[0], maple_version.decode(), params['maple_file'], params['functype'], params['maxorder']))
+'''.format(repository_relative_path(params, sys.argv[0]),
+           maple_version.decode(),
+           repository_relative_path(params, params['maple_file']),
+           params['functype'],
+           params['maxorder']))
 
 
 def strip_outer_parentheses(text):

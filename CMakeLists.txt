@@ -28,14 +28,14 @@ set(IFXC_ML26_MANIFEST_CHECK_ARGS
 set(IFXC_ML25_MAPLE2C_ARGS
   ${Python3_EXECUTABLE}
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c.py
-  --srcdir ${CMAKE_CURRENT_SOURCE_DIR}
+  --srcdir .
   --functional mgga_xc_ml25
   --maxorder 3
 )
 set(IFXC_ML26_MAPLE2C_ARGS
   ${Python3_EXECUTABLE}
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/maple2c.py
-  --srcdir ${CMAKE_CURRENT_SOURCE_DIR}
+  --srcdir .
   --functional mgga_xc_ml26
   --maxorder 2
 )
