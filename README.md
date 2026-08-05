@@ -148,10 +148,11 @@ hand.
 `libifxc` is licensed under MPL-2.0. See [`LICENSE`](LICENSE) and
 [`NOTICE`](NOTICE).
 
-## Citation
+## Recommended citation
 
-**Software:** Zhang, D.; Shu, Y.; Truhlar, D. G. *libifxc*, version 0.4.0;
-2026. [https://github.com/Dayou-Zhang/libifxc](https://github.com/Dayou-Zhang/libifxc).
+**Software:** D. Zhang, Y. Shu, and D. G. Truhlar, *libifxc*, version 0.4.0,
+University of Minnesota, Minneapolis, 2026.
+[https://github.com/Dayou-Zhang/libifxc](https://github.com/Dayou-Zhang/libifxc).
 
 **ML25:** Zhang, D.; Shu, Y.; Truhlar, D. G. Reinventing Density Functional
 Theory with Machine Learning on Integral Features. *J. Chem. Theory Comput.*
