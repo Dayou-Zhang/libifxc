@@ -1,8 +1,8 @@
 # libifxc
 
-`libifxc` is a C library for evaluating integral features in integral-feature
-density functional theory. It is heavily inspired by the
-[Libxc project](https://libxc.gitlab.io/).
+`libifxc` is a C library for evaluating integral features constructed from
+local ingredients in integral-feature density functional theory. It is heavily
+inspired by the [Libxc project](https://libxc.gitlab.io/).
 
 ## Build and install
 
@@ -41,15 +41,26 @@ Use `ifxc_output_size()` to size result buffers. Feature-set and feature
 metadata are available through `ifxc_feature_set_info()` and
 `ifxc_feature_info()`.
 
-| Feature set | Features | Maximum derivative order |
+| Feature set | Integral features from local ingredients | Maximum derivative order |
 | --- | ---: | ---: |
 | ML25 | 66 | 3 |
 | ML26 | 69 | 2 |
 
+`libifxc` evaluates integral features constructed from local ingredients. These
+ingredients are computed pointwise from the supplied grid quantities and
+integrated over the grid, so the resulting integral features are global
+quantities. Integral features requiring nonlocal ingredients, such as the eight
+rung-3.5 features, the VV10 nonlocal-correlation feature, and the Hartree–Fock
+exchange-energy feature used by ML26, are calculated by the host electronic
+structure program. For example,
+[`pyscf-ifdft`](https://github.com/Dayou-Zhang/pyscf-ifdft) calculates these
+additional features and combines them with the 69 integral features from
+`libifxc` to form the model's full 79-feature vector.
+
 ### C example
 
-This program evaluates ML25 feature integrands and their integrated values for
-two spin-unpolarized grid points:
+This program evaluates local ingredients at two grid points and uses them to
+construct ML25 integral features for a spin-unpolarized density:
 
 ```c
 #include <stdio.h>
@@ -103,7 +114,7 @@ int main(void)
     return 1;
   }
 
-  printf("feature 0 local at point 0: %g\n",
+  printf("local ingredient for feature 0 at point 0: %g\n",
          local[IFXC_ML25_LAK_X]);
   printf("feature 0 integral: %g\n",
          integral[IFXC_ML25_LAK_X]);
@@ -124,7 +135,7 @@ The header documents input components and output layouts. See
 [`tests/test_api.c`](tests/test_api.c) for complete local, integral, and
 derivative examples.
 
-## Adding an integral-feature functional
+## Adding integral features from local ingredients
 
 During development, add a Maple source such as
 `maple/if_mgga/mgga_xc_myfunctional.mpl`, including its `type: if_mgga`,
